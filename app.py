@@ -1,6 +1,6 @@
-from flask import Flask, session, render_template, request, jsonify, url_for, redirect
+from flask import Flask, session, render_template, request, jsonify, url_for, redirect, send_file
 from dotenv import load_dotenv
-import os
+import os, tempfile, subprocess, zipfile
 load_dotenv()
 
 from flask_dance.contrib.github import make_github_blueprint, github
@@ -8,8 +8,11 @@ from flask_session import Session
 #from redis import Redis
 import json
 import requests
+import pandas as pd
 import re
 import csv
+import io
+import platform #for running locally
 from flask_caching import Cache
 from mappings import schema_field_mapping, actions_field_mapping, frequency_field_mapping
 from processMappings import map_form_to_schema
@@ -20,6 +23,8 @@ from datetime import datetime
 from helpers import set_flask_environment
 from werkzeug.middleware.proxy_fix import ProxyFix
 from dois import ObisDoi
+from convert_to_dwc import convert_to_dwc as run_dwc_conversion
+from urllib.parse import quote, unquote
 
 app = Flask(__name__)
 set_flask_environment(app=app)
@@ -48,6 +53,13 @@ github_blueprint=make_github_blueprint(
     )
 app.register_blueprint(github_blueprint, url_prefix="/login")
 
+if platform.system() == "Windows":
+    R_PATH = r"C:\Program Files\R\R-4.4.2\bin\Rscript.exe"  # adjust to your machine
+else:
+    R_PATH = "Rscript" 
+
+EOV_USER = os.getenv("EOV_USER")
+EOV_PASS = os.getenv("EOV_PASS")
 
 # GitHub URLS 
 REPO_OWNER = "BioEcoOcean"
@@ -411,47 +423,141 @@ def generate_doi():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# @app.route("/submit_update", methods=["POST"])  #Note to self: check why I have this route still? I thik it's included in submitAction so doesn't need to be included here anymore
-# def submit_update():
-#     updated_data = request.form.to_dict()  # Get form data as a dictionary
-#     issue_number = request.form.get("issue_number")  # Get the selected issue number
-#     GITHUB_TOKEN = session.get("github_oauth_token", {}).get("access_token")
+@app.route("/process_file", methods=["POST"])
+def process_file():
+    file = request.files.get("file")
+    url = request.form.get("url")
 
-#     # Map the form data to the schema format
-#     schema_entry = makeFormJson(updated_data)  # Mapping form data to schema format
+    try:
+        sheet_data = {}
 
-#     # Construct the GitHub issue URL and the payload to send
-#     issue_url = f"https://api.github.com/repos/{REPO_OWNER}/{GITHUB_REPO}/issues/{issue_number}"
-#     comments_url = f"https://api.github.com/repos/{REPO_OWNER}/{GITHUB_REPO}/issues/{issue_number}/comments"
-#     headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+        if file:
+            if file.filename.endswith((".xls", ".xlsx", ".ods")):
+                xls = pd.ExcelFile(file)
+                for sheet in xls.sheet_names:
+                    df = xls.parse(sheet, nrows=5)
+                    sheet_data[sheet] = {
+                        "headers": list(df.columns),
+                        "rows": df.fillna("").values.tolist()  # convert to list of lists
+                    }
+            else:
+                df = pd.read_csv(file, sep=None, engine="python", nrows=5)
+                sheet_data["Sheet1"] = {  ##Probably change name of this
+                    "headers": list(df.columns),
+                    "rows": df.fillna("").values.tolist()
+                }
 
-#     # GitHub Payload includes the title and body, with the body containing the metadata as formatted JSON
-#     payload = {
-#         "title": f"Updated Submission: {updated_data.get('name', 'Unnamed Program')}",
-#         "body": "### Metadata Submission\n\n" + json.dumps(schema_entry, indent=4)  # Send the mapped schema as part of the body
-#     }
+        elif url:
+            import io, requests
+            r = requests.get(url)
+            r.raise_for_status()
+            content = io.BytesIO(r.content)
 
-#     # Step 1: Update the issue with new data (PATCH request)
-#     response = requests.patch(issue_url, json=payload, headers=headers)
+            if url.endswith((".xls", ".xlsx", ".ods")):
+                xls = pd.ExcelFile(content)
+                for sheet in xls.sheet_names:
+                    df = xls.parse(sheet, nrows=5)
+                    sheet_data[sheet] = {
+                        "headers": list(df.columns),
+                        "rows": df.fillna("").values.tolist()
+                    }
+            else:
+                df = pd.read_csv(io.StringIO(r.text), sep=None, engine="python", nrows=5)
+                sheet_data["Sheet1"] = {
+                    "headers": list(df.columns),
+                    "rows": df.fillna("").values.tolist()
+                }
 
-#     # Check if the issue was updated successfully
-#     if response.status_code == 200:
-#         # Step 2: Add a comment to the issue (POST request)
-#         comment_payload = {
-#             "body": f"Entry updated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"  # Add a timestamp for the update
-#         }
-#         comment_response = requests.post(comments_url, json=comment_payload, headers=headers)
+        else:
+            return jsonify({"error": "No file or URL provided"}), 400
 
-#         # Check if the comment was added successfully
-#         if comment_response.status_code == 201:
-#             issue_url = f"https://github.com/{REPO_OWNER}/{GITHUB_REPO}/issues/{issue_number}"
-#             return render_template("success.html", message="Issue updated successfully!", issue_url=issue_url)
-#         else:
-#             error_details = comment_response.json()
-#             return render_template("error.html", error="Failed to add update comment.", details=error_details)
-#     else:
-#         error_details = response.json()
-#         return render_template("error.html", error="Failed to update issue.", details=error_details)
+        return jsonify({"sheets": sheet_data})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/convert_to_dwc", methods=["POST"])
+def convert_to_dwc_route():
+    file = request.files.get("file")
+    if not file:
+        return jsonify({"error": "No file uploaded or file not in expected format"}), 400
+
+    try:
+        # Create temporary directories
+        with tempfile.TemporaryDirectory() as tmpdir:
+            upload_path = os.path.join(tmpdir, file.filename)
+            file.save(upload_path)
+            print("Upload path: ", upload_path)
+
+            #output_path = os.path.join(tmpdir, f"{os.path.splitext(file.filename)[0]}_dwc.csv")
+            #print("Output path: ", output_path)
+            try:
+                output_files = run_dwc_conversion(upload_path, tmpdir)
+            except Exception as e:
+                return jsonify({"error": f"Python script failed:\n{str(e)}"}), 500
+            # commented out the part that handles R files since switched to python for now
+            # # Pass tmpdir to R
+            # result = subprocess.run(
+            #     [R_PATH, "static/scripts/convert_to_dwc.R", upload_path, tmpdir],
+            #     capture_output=True,
+            #     text=True
+            # )
+
+            # if result.returncode != 0:
+            #     return jsonify({"error": f"R script failed:\n{result.stderr}"}), 500
+
+            # # Gather CSV files
+            # output_files = sorted([os.path.join(tmpdir, f) for f in os.listdir(tmpdir) if f.endswith(".csv")])
+            previews = {}
+            for f in output_files:
+                df = pd.read_csv(f)
+                previews[os.path.basename(f)] = df.head().to_html(classes="table table-striped", index=False)
+
+            # Create ZIP of all CSVs
+            zip_filename = f"dwc_files_{datetime.now().strftime('%Y%m%d%H%M%S')}.zip"
+            zip_path = os.path.join(tempfile.gettempdir(), zip_filename)
+            with zipfile.ZipFile(zip_path, "w") as zipf:
+                for f in output_files:
+                    zipf.write(f, arcname=os.path.basename(f))
+            
+            # Return preview + download links
+            return jsonify({
+                "previews": previews,
+                "files": url_for("download_tmp", path=quote(zip_path))
+            })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+@app.route("/download_tmp")
+def download_tmp():
+    file_path = request.args.get("path")
+    if not file_path or not os.path.exists(file_path):
+        return "File not found", 404
+    file_path = unquote(file_path)
+    if not os.path.exists(file_path):
+        return "File not found", 404
+    return send_file(file_path, as_attachment=True)
+
+####### EOV pages #######
+@app.route("/eov/<eov>", methods=["GET", "POST"])
+def eov_page(eov):
+    if request.method == "POST":
+        user = request.form.get("username")
+        pw = request.form.get("password")
+        if user == EOV_USER and pw == EOV_PASS:
+            session["eov_logged_in"] = True
+            return redirect(url_for("eov_page", eov=eov))
+        else:
+            flash("Invalid username or password", "error")
+
+    logged_in = session.get("eov_logged_in", False)
+
+    template_path = f"eov/{eov}.html"
+    try:
+        return render_template(template_path, eov=eov, logged_in=logged_in)
+    except:
+        return f"<h2>No page found for EOV: {eov}</h2>", 404
+
 
 ####### Helper functions ########
 def fetch_projects_from_github():

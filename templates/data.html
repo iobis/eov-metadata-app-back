@@ -4,8 +4,85 @@
 
 {% block content %}
 
+<script src="/static/scripts/readfile.js"></script>
+
 <h1>Coming soon: data standardization tools</h1>
-<p>These upcoming developments will allow you to upload an EOV dataset and convert it to Darwin Core, making it easier to submit data to OBIS! 
-    We will provide user-friendly data template spreadsheets with which you can align your data to, to use this tool.</p>
+<p>These upcoming developments will allow you to upload an EOV dataset and convert it to Darwin Core, making it easier to submit data to OBIS! We will provide user-friendly data template spreadsheets with which you can align your data to, to use this tool.</p>
+<p>For more information about the general data management practices for EOVs, please see: <a href="https://iobis.github.io/eov-data-management/" target="_blank">iobis.github.io/eov-data-management</a>.</p>
+
+<h2>Essential Ocean Variables (EOVs)</h2>
+<div class="eov-gallery">
+    <div class="eov-item">
+        <img src="{{ url_for('static', filename='images/bioeco.png') }}" alt="BioEco EOVs">
+        <span>BioEco EOVs</span>
+    </div>
+    <div class="eov-item">
+        <img src="{{ url_for('static', filename='images/Fish.png') }}" alt="Fish">
+        <span>Fish</span>
+    </div>
+    <div class="eov-item">
+        <img src="{{ url_for('static', filename='images/Hard-coral.png') }}" alt="Hard Coral">
+        <span>Hard Coral</span>
+    </div>
+    <div class="eov-item">
+        <img src="{{ url_for('static', filename='images/Invertebrates.png') }}" alt="Invertebrates">
+        <span>Invertebrates</span>
+    </div>
+    <div class="eov-item">
+        <a href="{{ url_for('eov_page', eov='macroalgae') }}">
+            <img src="{{ url_for('static', filename='images/Macroalgae.png') }}" alt="Macroalgae">
+            <span>Macroalgae</span>
+        </a>
+    </div>
+    <div class="eov-item">
+        <img src="{{ url_for('static', filename='images/Mangroves.png') }}" alt="Mangroves">
+        <span>Mangroves</span>
+    </div>
+    <div class="eov-item">
+        <img src="{{ url_for('static', filename='images/Marine-mammals.png') }}" alt="Marine Mammals">
+        <span>Marine Mammals</span>
+    </div>
+    <div class="eov-item">
+        <img src="{{ url_for('static', filename='images/Microbes.png') }}" alt="Microbes">
+        <span>Microbes</span>
+    </div>
+    <div class="eov-item">
+        <img src="{{ url_for('static', filename='images/Phytoplankton.png') }}" alt="Phytoplankton">
+        <span>Phytoplankton</span>
+    </div>
+    <div class="eov-item">
+        <img src="{{ url_for('static', filename='images/Sea-turtles.png') }}" alt="Sea Turtles">
+        <span>Sea Turtles</span>
+    </div>
+    <div class="eov-item">
+        <img src="{{ url_for('static', filename='images/Seabirds.png') }}" alt="Seabirds">
+        <span>Seabirds</span>
+    </div>
+    <div class="eov-item">
+        <img src="{{ url_for('static', filename='images/Seagrass.png') }}" alt="Seagrass">
+        <span>Seagrass</span>
+    </div>
+    <div class="eov-item">
+        <img src="{{ url_for('static', filename='images/Zooplankton.png') }}" alt="Zooplankton">
+        <span>Zooplankton</span>
+    </div>
+</div>
+<h2>Sampling Approach</h2>
+<div class="eov-gallery">
+    <div class="eov-item">
+        <img src="{{ url_for('static', filename='images/quadrat.png') }}" alt="Quadrat">
+        <span>Quadrat</span>
+    </div>
+    <div class="eov-item">
+        <img src="{{ url_for('static', filename='images/remotesensing.png') }}" alt="Remote Sensing">
+        <span>Remote Sensing</span>
+    </div>
+    <div class="eov-item">
+        <img src="{{ url_for('static', filename='images/bioeco.png') }}" alt="Roving">
+        <span>More coming...</span>
+    </div>
+    <!-- Add other methods here -->
+</div>
+
 
 {% endblock %}
