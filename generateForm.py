@@ -30,44 +30,83 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
         form_html += """
         <h2>General Information</h2>
         """
-        ### Project Name ###
+        ### Data Producer Name ###
         form_html += f"""
-        <h4><label for='project_name'>Data Producer Name:<span class="required">*</span><span class="info-circle" data-tooltip="Enter the full name or title of the data producer. Data producers may include monitoring programs, projects, institutions, etc.">ⓘ</span></label></h4>
-        <div class='previous'><strong>Previously entered:</strong> {prefilled_data.get('legalName', 'N/A')}</div>
-        <input type='text' name='project_name' id='project_name' value="{prefilled_data.get('legalName', '')}" placeholder="Co-Creating Transformative Pathways to Biological and Ecosystem Ocean Observations" required><br><br>
+        Data producers may include monitoring programs, projects, institutions, etc.
+        <div class="flex-row">
+            <div class="form-label">
+                <h4><label for='project_name'>Data Producer Name:<span class="required">*</span><span class="info-circle" data-tooltip="Enter the full name or title of the data producer. Data producers may include monitoring programs, projects, institutions, etc.">ⓘ</span></label></h4>
+            </div>
+            <div class="flex-col input-col">
+                <input type='text' name='project_name' id='project_name' value="{prefilled_data.get('legalName', '')}" placeholder="Co-Creating Transformative Pathways to Biological and Ecosystem Ocean Observations" required>
+                <div class='previous'><strong>Previously entered:</strong> {prefilled_data.get('legalName', 'N/A')}</div>
+            </div>
+        </div>
+        <br>
         """
-        ### Project Acronym ###
+        ### Data Producer Acronym ###
         form_html += f"""
-        <h4><label for='shortname'>Data Producer Acrynom:<span class="info-circle" data-tooltip="Enter the short name or acrynom of the data producer.">ⓘ</span></label></h4>
-        <div class='previous'><strong>Previously entered:</strong> {prefilled_data.get('name', 'N/A')}</div>
-        <input type='text' name='shortname' id='shortname' value="{prefilled_data.get('name', '')}" placeholder="BioEcoOcean"><br><br>
+        <div class="flex-row">
+            <div class="form-label">
+                <h4><label for='shortname'>Data Producer Acrynom:<span class="info-circle" data-tooltip="Enter the short name or acrynom of the data producer.">ⓘ</span></label></h4>
+            </div>
+            <div class="flex-col input-col">
+                <input type='text' name='shortname' id='shortname' value="{prefilled_data.get('name', '')}" placeholder="BioEcoOcean">
+                <div class='previous'><strong>Previously entered:</strong> {prefilled_data.get('name', 'N/A')}</div>
+            </div>
+        </div>
+        <br>
         """
         ### URL ###
         form_html += f"""
-        <label for='url'>URL:<span class="required">*</span><span class="info-circle" data-tooltip="Provide the URL to the homepage for the data producer.">ⓘ</span></label>
-        <div class='previous'><strong>Previously entered:</strong> {prefilled_data.get('url', 'N/A')}</div>
-        <input type='url' name='url' id='url' value="{prefilled_data.get('url', '')}" placeholder="https://bioecoocean.org/" required><br><br>
+        <div class="flex-row">
+            <div class="form-label">
+                <label for='url'>URL:<span class="required">*</span><span class="info-circle" data-tooltip="Provide the URL to the homepage for the data producer.">ⓘ</span></label>
+            </div>
+            <div class="flex-col input-col">
+                <input type='url' name='url' id='url' value="{prefilled_data.get('url', '')}" placeholder="https://bioecoocean.org/" required>
+                <div class='previous'><strong>Previously entered:</strong> {prefilled_data.get('url', 'N/A')}</div>
+            </div>
+        </div>
+        <br>
         """
         ### Project ID ###
         form_html += f"""
-        <label for='projid'>Data producer ID:<span class="info-circle" data-tooltip="Provide the ID for the entity producing EOV data, e.g. project, institution, programme, etc. IDs could include a Research Activity Identifier (RAiD), or Research Organization Registry identifier (ROR ID). If you do not currently have one it can be added later. The ID will facilitate connecting the data producer metadata with other outputs e.g. datasets in OBIS">ⓘ</span></label>
-        <div class='previous'><strong>Previously entered:</strong> {prefilled_data.get('identifier', {}).get('url', 'N/A')}</div>
-        <input type='text' name='projid' id='projid' value="{prefilled_data.get('identifier', {}).get('url', '')}" placeholder="e.g. a RAiD, or ROR ID"><br>
+        <div class="flex-row">
+            <div class="form-label">
+                <label for='projid'>Data producer ID:<span class="info-circle" data-tooltip="Provide the ID for the entity producing EOV data, e.g. project, institution, programme, etc. IDs could include a Research Activity Identifier (RAiD), or Research Organization Registry identifier (ROR ID). If you do not currently have one it can be added later. The ID will facilitate connecting the data producer metadata with other outputs e.g. datasets in OBIS">ⓘ</span></label>
+            </div>
+            <div class="flex-col input-col">
+                <input type='text' name='projid' id='projid' value="{prefilled_data.get('identifier', {}).get('url', '')}" placeholder="e.g. a RAiD, or ROR ID">
+                <div class='previous'><strong>Previously entered:</strong> {prefilled_data.get('identifier', {}).get('url', 'N/A')}</div>
+            </div>
+        </div>
         """
         identifier_types = form_schema.get("identifier_types", {})
         projid_type_value = prefilled_data.get('identifier', {}).get('description', '')
 
-        form_html += "<a> Identifier Type:</a>"
-        form_html += "<select name='projid_type' id='projid_type'>"
-        form_html += "<option value='' disabled selected>Select type</option>"
+        form_html += f"""
+        <div class="flex-row">
+            <div class="form-label">
+                Identifier Type:
+            </div>
+            <div class="flex-col input-col">
+                <select name='projid_type' id='projid_type'>
+                <option value='' disabled selected>Select type</option>
+        """
         for key, info in identifier_types.items():
             selected = "selected" if projid_type_value == key else ""
             form_html += f"<option value='{key}' {selected}>{info['name']}</option>"
-        form_html += "</select><br>"
-        form_html += "<a> If your desired type is not listed, please contact us to have it added. To generate a DOI for your entry, click the button and fill the form below, ten copy the generated DOI into the field above. Some fields may have been prepopulated for you using information in the form. Please confirm data is correct before creating your DOI. Contact helpdesk@obis.org to correct or update information.</a><br>"
+        form_html += """
+                </select>
+                <div class='previous'><strong>Previously entered:</strong> {}</div>
+                <a> If your desired type is not listed, please contact us to have it added. To generate a DOI for your entry, click the button and fill the form below, ten copy the generated DOI into the field above. Some fields may have been prepopulated for you using information in the form. Please confirm data is correct before creating your DOI. Contact helpdesk@obis.org to correct or update information.</a>
+            
+        """.format(projid_type_value if projid_type_value else "N/A")
         # Add DataCite button
         form_html += f"""
-        <button type="button" id="generate-doi-btn" onclick="toggleDoiForm()">Generate DOI</button>
+        <button type="button" id="generate-doi-btn" onclick="toggleDoiForm()" style="width: 40%;">Generate DOI</button></div>
+        </div>
         <div id="doi-form-container" style="display: none; border: 1px solid #ccc; padding: 1px 15px; margin: 10px 0; background-color: #f9f9f9;">
             <h3>DOI Information</h3>
             <h4>Title</h4>
@@ -91,15 +130,46 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
             
             <button type="button" id="submit-doi-btn" onclick="submitDoiRequest()">Create DOI</button>
             <button type="button" onclick="toggleDoiForm()">Cancel</button>
-        </div>
-        <span id="doi-result"></span>
+        </div><br>
+        <span id="doi-result"></span><br>
         """
 
         ### Description ###
         form_html += f"""
-        <label for='description'>Description: <span class="info-circle" data-tooltip="Provide a brief description of the project.">ⓘ</span></label>
-        <div class='previous'><strong>Previously entered:</strong> {prefilled_data.get('description', 'N/A')}</div>
-        <textarea name='description' id='description' maxlength="2000" placeholder="BioEcoOcean was funded by the European Union under grant agreement No. 101136748 with 5.7 million EUR to address this challenge. Over the course of 4 years, from February 2024 to January 2027, a consortium of 9 European partners aims to create, and demonstrate the value of, a globally applicable Blueprint for Integrated Ocean Science (BIOS).">{prefilled_data.get('description', '')}</textarea><br><br>
+        <div class="flex-row">
+            <div class="form-label">
+                <label for='description'>Description: <span class="info-circle" data-tooltip="Provide a brief description of the project.">ⓘ</span></label>
+            </div>
+            <div class="flex-col input-col">
+                <textarea name='description' id='description' maxlength="2000" placeholder="BioEcoOcean was funded by the European Union under grant agreement No. 101136748 with 5.7 million EUR to address this challenge. Over the course of 4 years, from February 2024 to January 2027, a consortium of 9 European partners aims to create, and demonstrate the value of, a globally applicable Blueprint for Integrated Ocean Science (BIOS).">{prefilled_data.get('description', '')}</textarea>
+                <div class='previous'><strong>Previously entered:</strong> {prefilled_data.get('description', 'N/A')}</div>
+            </div>
+        </div><br>
+        """
+
+        # Parent organization
+        form_html += f"""
+        <label for='parentOrganization'>Parent Organization: <span class="info-circle" data-tooltip="Provide the name and URL of the parent or administering organization, if applicable.">ⓘ</span></label>
+        
+        <div class="flex-row">
+            <div class="form-label">
+                Name: 
+            </div>
+            <div class="flex-col input-col">
+                <input type='text' name='parentOrganization' id='parentOrganization' value="{prefilled_data.get('parentOrganization.legalName', '')}" placeholder="Argo">
+                <div class='previous'><strong>Previously entered:</strong> {prefilled_data.get('parentOrganization.legalName', 'N/A')}</div>
+            </div>
+        </div>
+        
+        <div class="flex-row" style="max-width:100%;align-items: baseline; justify-content: left">
+            <div class="form-label">
+                URL:                 
+            </div>
+            <div class="flex-col input-col">
+                <input type='text' name='parentOrganization_url' id='parentOrganization_url' value="{prefilled_data.get('parentOrganization.url', '')}" placeholder="https://argo.ucsd.edu/about/">
+                <div class='previous'><strong>Previously entered:</strong> {prefilled_data.get('parentOrganization.url', 'N/A')}</div>
+            </div>
+        </div><br>
         """
 
         ### Keywords Section ###
@@ -116,13 +186,18 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
         print("True Keywords: ", true_keywords, flush=True)
         keywords_display = ", ".join([keyword["name"] for keyword in true_keywords if "name" in keyword]) if true_keywords else "N/A"
         form_html += f"""
-        <label for='keywords'>Keywords: <span class='info-circle' data-tooltip='Enter relevant keywords from controlled vocabulary collections for the data producer.'>ⓘ</span></label>
-        Type in the box below to search for a keyword from a controlled vocabulary collection. This will query both The Environment Ontology (ENVO) and the BODC NERC Vocabulary Server.
-        Please confirm a keyword is relevant by clicking the associated link and reading its definition.<br>
-        <div class='previous'><strong>Previously entered: </strong>{keywords_display}</div>
-        <div class="search-container">
-            <input type="text" id="ontology-search" name="ontology_term" placeholder="Search using a minimum of 3 characters, e.g. 'coral', 'sea', etc." autocomplete="off">
-            <button type="button" id="ontology-search-btn">Search</button>
+        <div class="flex-row">
+            <div class="form-label">
+                <label for='keywords'>Keywords: <span class='info-circle' data-tooltip='Enter relevant keywords from controlled vocabulary collections for the data producer.'>ⓘ</span></label>
+            </div>
+            <div class="flex-col input-col">
+                <div class="search-container">
+                    <input type="text" id="ontology-search" name="ontology_term" placeholder="Search using a minimum of 3 characters, e.g. 'coral', 'sea', etc." autocomplete="off">
+                    <button type="button" id="ontology-search-btn">Search</button>
+                    <div class='previous'><strong>Previously entered: </strong>{keywords_display}</div>
+                    <div style="max-width: 90%;">Type in the box above to search for a keyword from a controlled vocabulary collection. This will query both The Environment Ontology (ENVO) and the BODC NERC Vocabulary Server. Please confirm a keyword is relevant by clicking the associated link and reading its definition. Selected keywords will be populated in the box below.</div><br>
+                </div>
+            </div>
         </div>
 
         <!-- Results Table -->
@@ -140,10 +215,15 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
             </tbody>
         </table>
         </div>
-
-        <p style="font-weight:bold">Selected Keywords:<p>
-        <div id="selected-keywords-list" class="selected-keywords-list">
-            <!-- Selected keywords will appear here -->
+        <div class="flex-row" style="align-items: anchor-center">
+            <div class="form-label">
+                <p style="font-style:italic">Selected Keywords:<p>
+            </div>
+            <div class="flex-col input-col">
+                <div id="selected-keywords-list" class="selected-keywords-list">
+                <!-- Selected keywords will appear here -->
+                </div>
+            </div>
         </div>
         <input type="hidden" id="selected-keywords-json" name="selected-keywords-json" value="">
         <br>
@@ -169,30 +249,55 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
             license_value = prefilled_data.get("publishingPrinciples", {}).get("name", 'N/A')
 
             # Show previously entered value above the field
-            form_html += f"<label for='license'>{license_field['name']}:<span class='info-circle' data-tooltip='Select the most appropriate license(s) for the data produced.'>ⓘ</span></label>"
-            form_html += f"<p>Please select which Creative Commons license (<a href='https://creativecommons.org/share-your-work/cclicenses/'>https://creativecommons.org/share-your-work/cclicenses/</a>) you expect the data produced by your entry to adhere to. Select as many as applicable.</p>"
-            if license_value:
-                form_html += f"<div class='previous'><strong>Previously entered:</strong> {license_value}</div>"
-            else:
-                form_html += "<div class='previous'><strong>Previously entered:</strong> N/A</div>"
-
-            # License dropdown
-            form_html += "<select name='license' id='license' multiple size=4>"
+            form_html += f"""
+            <div class="flex-row">
+                <div class="form-label">
+                    <label for='license'>{license_field['name']}:<span class='info-circle' data-tooltip='Select the most appropriate license(s) for the data produced.'>ⓘ</span></label>
+                </div>
+                <div class="flex-col input-col">
+                    <select name='license' id='license' multiple size=4 style="height:125px">
+            """
             #form_html += "<option value='' selected>Select option</option>"
-
             for option_key, option in license_field['options'].items(): #option_key is necessary to get the key from schema
                 selected = "selected" if option['name'] == license_value else ""
                 form_html += f"<option value='{option['name']}|{option['url']}' {selected}>{option['name']}</option>"
-            form_html += "</select><br>"
+            form_html += f"""
+                    </select>
+                    <div class='previous'><strong>Previously entered:</strong> {license_value if license_value else 'N/A'}</div>
+                    <div style="max-width: 90%;">Please select which <a href='https://creativecommons.org/share-your-work/cclicenses/'>Creative Commons license</a> you expect the data produced by your entry to adhere to. Select as many as applicable. If none of the licenses above apply, and/or you would like to provide the link to an organizational policy, please optionally fill in the fields below.</div>
+                </div>
+                </div>
+                """
         else:
             # Handle the case where 'license' is missing
             form_html += "<p><strong>Error: License field is missing in the schema.</strong></p>"
-        form_html += "<a>If none of the licenses above apply, and/or you would like to provide the link to an organizational policy, please optionally fill in the fields below.</a><br>"
+        
+        # Specific policy statements
         form_html += f"""
-        <input type="text" name="datapolicy_name" id='datapolicy_name' placeholder="Name of policy, e.g. IOC Data Policy and Terms of Use (2023)">
-        <input type="text" name="datapolicy_text" id='datapolicy_text' placeholder="Brief description of policy">
-        <input type="text" name="datapolicy_url" id='datapolicy_url' placeholder="URL pointing to policy, e.g. https://iode.org/resources/ioc-data-policy-and-terms-of-use-2023/">
-        <br><br>
+        <div class="flex-row">
+            <div class="form-label">
+                Policy Name:
+            </div>
+            <div class="flex-col input-col">
+                <input type="text" name="datapolicy_name" id='datapolicy_name' placeholder="Name of policy, e.g. IOC Data Policy and Terms of Use (2023)">
+            </div>
+        </div>
+        <div class="flex-row">
+            <div class="form-label">
+                Description:
+            </div>
+            <div class="flex-col input-col">
+                <input type="text" name="datapolicy_text" id='datapolicy_text' placeholder="Brief description of policy">
+            </div>
+        </div>
+        <div class="flex-row">
+            <div class="form-label">
+                Policy URL:
+            </div>
+            <div class="flex-col input-col">
+                <input type="text" name="datapolicy_url" id='datapolicy_url' placeholder="URL pointing to policy, e.g. https://iode.org/resources/ioc-data-policy-and-terms-of-use-2023/">
+            </div>
+        </div><br>
         """
 
         ### Sampling frequency ###
@@ -200,54 +305,49 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
         sampling_freq_value = actions_data.get('description', '')
 
         form_html += f"""
-        <label for='sampling_frequency'>Sampling frequency:<span class='info-circle' data-tooltip='Select the frequency at which field sampling occurs.'>ⓘ</span></label>
-        <div class='previous'><strong>Previously entered:</strong> {sampling_freq_value if sampling_freq_value else 'N/A'}</div>
-        <select name="sampling_frequency" id="sampling_frequency">
-            <option value="" disabled {'selected' if not sampling_freq_value else ''}>Select an option</option>
+        <div class="flex-row">
+            <div class="form-label">
+                <label for='sampling_frequency'>Sampling frequency:<span class='info-circle' data-tooltip='Select the frequency at which field sampling occurs.'>ⓘ</span></label>
+            </div>
+            <div class="flex-col input-col">
+                <select name="sampling_frequency" id="sampling_frequency">
+                    <option value="" disabled {'selected' if not sampling_freq_value else ''}>Select an option</option>
         """
 
         for key, option in frequency_options.items():
             selected = "selected" if sampling_freq_value == key else ""
             form_html += f"<option value='{key}' {selected}>{option['name'].title()}</option>"
 
-        form_html += """
-        </select>
-        <br><br>
+        form_html += f"""
+                </select>
+                <div class='previous'><strong>Previously entered:</strong> {sampling_freq_value if sampling_freq_value else 'N/A'}</div>
+            </div>
+        </div>
+        <br>
         """
-        #old sampling freq code
-        # form_html += f"""
-        # <label for='sampling_frequency'>Sampling frequency:<span class='info-circle' data-tooltip='Select the frequency at which field sampling occurs.'>ⓘ</span></label>
-        # <div class='previous'><strong>Previously entered:</strong> {actions_data.get('description', 'N/A')}</div>
-        # <select name="sampling_frequency" id="sampling_frequency">
-        #     <option value="" disabled {'selected' if not actions_data.get('description', '') else ''}>Select an option</option>
-        #     <option value="never" {'selected' if actions_data.get('description', '') == 'once' else ''}>Never</option>
-        #     <option value="yearly" {'selected' if actions_data.get('description', '') == 'yearly' else ''}>Yearly</option>
-        #     <option value="asneeded" {'selected' if actions_data.get('description', '') == 'quarterly' else ''}>Quarterly</option>
-        #     <option value="monthly" {'selected' if actions_data.get('description', '') == 'monthly' else ''}>Monthly</option>
-        #     <option value="weekly" {'selected' if actions_data.get('description', '') == 'weekly' else ''}>Weekly</option>
-        #     <option value="daily" {'selected' if actions_data.get('description', '') == 'daily' else ''}>Daily</option>
-        #     <option value="hourly" {'selected' if actions_data.get('description', '') == 'hourly' else ''}>Hourly</option>
-        #     <option value="other" {'selected' if actions_data.get('description', '') == 'other' else ''}>Other</option>
-        # </select>
-        # <br><br>
-        # """
 
         ### Update frequency ###
         update_freq_value = frequency_data.get('frequency', '')
 
         form_html += f"""
-        <label for='frequency'>Metadata update frequency:<span class="required">*</span><span class='info-circle' data-tooltip='Select the frequency you expect metadata documented in this form to be updated.'>ⓘ</span></label>
-        <div class='previous'><strong>Previously entered:</strong> {update_freq_value if update_freq_value else 'N/A'}</div>
-        <select name="frequency" id="frequency" required>
-            <option value="" disabled {'selected' if not update_freq_value else ''}>Select an option</option>
+        <div class="flex-row">
+            <div class="form-label">
+                <label for='frequency'>Metadata update frequency:<span class="required">*</span><span class='info-circle' data-tooltip='Select the frequency you expect metadata documented in this form to be updated.'>ⓘ</span></label>
+            </div>
+            <div class="flex-col input-col">
+                <select name="frequency" id="frequency" required>
+                    <option value="" disabled {'selected' if not update_freq_value else ''}>Select an option</option>
         """
 
         for key, option in frequency_options.items():
             selected = "selected" if update_freq_value == key else ""
             form_html += f"<option value='{key}' {selected}>{option['name'].title()}</option>"
 
-        form_html += """
-        </select>
+        form_html += f"""
+                </select>
+                <div class='previous'><strong>Previously entered:</strong> {update_freq_value if update_freq_value else 'N/A'}</div>
+            </div>
+        </div><br>
         """
         form_html += "<hr style='border: none; border-bottom: dashed 2px #002366; '>"
 
@@ -263,8 +363,7 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
         Names: {", ".join(prefilled_data.get('contactPoint', {}).get('name', 'N/A')) if prefilled_data.get('contactPoint', {}).get('name') else "N/A"};
         Email: {", ".join(prefilled_data.get('contactPoint', {}).get('email', 'N/A')) if prefilled_data.get('contactPoint', {}).get('email') else "N/A"};
         URL: {", ".join(prefilled_data.get('contactPoint', {}).get('url', 'N/A')) if prefilled_data.get('contactPoint', {}).get('url') else "N/A"}
-         </div>
-
+        </div>
         """
         form_html += f"""
         <div id="contacts-container">
@@ -322,7 +421,7 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
             """
         form_html += """
         <button type="button" onclick="addContactInput()">Add Contact</button>
-        <br>
+        <br><br>
         """
         form_html += "<hr style='border: none; border-bottom: dashed 2px #002366; '>"
 
@@ -331,31 +430,48 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
         
         # Temporal coverage
         form_html += f"""
-        <h3><label for='temporal_coverage'>Temporal Coverage:<span class="info-circle" data-tooltip="Specify the date range for the project. Leave End Date blank if there is no known end date.">ⓘ</span></label></h3>
-        <div class='previous'><strong>Previously entered:</strong>
-            Start: {prefilled_data.get('foundingDate', 'N/A')},
-            End: {prefilled_data.get('dissolutionDate', 'N/A')}</div>
-        <div class="flex-col" style="max-width:600px;">
-            <div class="flex-row">
-                <b>Start date: </b> <input type='date' name='temporal_coverage_start' id='temporal_coverage_start'
+        <label for='temporal_coverage'>Temporal Coverage:<span class="info-circle" data-tooltip="Specify the date range for the project. Leave End Date blank if there is no known end date.">ⓘ</span></label>
+        <div class="flex-row">
+            <div class="form-label">
+                Start date:
+            </div>
+            <div class="flex-col input-col">    
+                <input type='date' name='temporal_coverage_start' id='temporal_coverage_start'
                     value="{prefilled_data.get('foundingDate', '') }" >
             </div>
-            <div class="flex-row">
-                <b>End  date: </b> <input type='date' name='temporal_coverage_end' id='temporal_coverage_end'
-                    value="{prefilled_data.get('dissolutionDate', '')}" >
+        </div>
+        <div class="flex-row">
+            <div class="form-label">
+                End  date:
             </div>
-        </div><br>
+            <div class="flex-col input-col">        
+                <input type='date' name='temporal_coverage_end' id='temporal_coverage_end' value="{prefilled_data.get('dissolutionDate', '')}" >
+                <div class='previous'><strong>Previously entered:</strong>
+                    Start: {prefilled_data.get('foundingDate', 'N/A')},
+                    End: {prefilled_data.get('dissolutionDate', 'N/A')}
+                </div>
+            </div>
+        </div>
+        <br>
         """
 
         # Spatial Coverage
         regional_id_str = 'MRGID: '
         form_html += f"""
-        <h4><label for="spatial_coverage_name">Spatial Coverage: <span class='info-circle' data-tooltip='Specify the name and MRGID of the area where the programme takes place. Use the search box to select an area from Marine Regions. Use the map below to also add bounding area coordinates.'>ⓘ</span></label></h4>
-        <a>Use the search box below to search for a marine location. Names are obtained from <a href="https://www.marineregions.org/gazetteer.php?p=search">Marine Regions Gazetteer</a>.
-        <div class='previous'><strong>Previously entered:</strong> {prefilled_data.get('areaServed', {}).get("name", 'N/A')} {regional_id_str}{prefilled_data.get('areaServed', {}).get("identifier", 'N/A')}</div>
-        <input type="text" id="search_regions" placeholder="Search for a region. Minimum 3 characters, e.g., 'hud', 'bay'" />
-        <button type="button" id="search_regions_btn">Search</button>
-        <br><br>
+        <div class="flex-row">
+            <div class="form-label">
+                <label for="spatial_coverage_name">Spatial Coverage: <span class='info-circle' data-tooltip='Specify the name and MRGID of the area where the programme takes place. Use the search box to select an area from Marine Regions. Use the map below to also add bounding area coordinates.'>ⓘ</span></label>
+            </div>
+            <div class="flex-col input-col">
+                <div>
+                <input type="text" id="search_regions" placeholder="Search for a region. Minimum 3 characters, e.g., 'hud', 'bay'">
+                <button type="button" id="search_regions_btn" style="max-width:35%">Search</button>
+                <div class='previous'><strong>Previously entered:</strong> {prefilled_data.get('areaServed', {}).get("name", 'N/A')} {regional_id_str}{prefilled_data.get('areaServed', {}).get("identifier", 'N/A')}</div>
+                <div style="max-width: 90%;">Use the search box above to search for a marine location. Names are obtained from <a href="https://www.marineregions.org/gazetteer.php?p=search">Marine Regions Gazetteer.</div>
+                </div>
+            </div>
+        </div>
+        
         <!-- Table to display search results -->
         <div class="table-scroll">
         <table id="regions_table" style="width:100%; display:none;">
@@ -372,9 +488,23 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
         </table>
         </div>
         <a><i>Auto-populated fields:</i></a><br>
-        Name: <input type="spatial" name="spatial_coverage_name" id="spatial_coverage_name" value="{prefilled_data.get('areaServed', {}).get("name", '')}" readonly>
-        MRGID: <input type="text" name="spatial_coverage_identifier" id="spatial_coverage_identifier" value="{prefilled_data.get('areaServed', {}).get("identifier", '')}" readonly>
-        <button type="button" onclick="clearMarineRegions()">Clear Location</button>
+        <div class="flex-row">
+            <div class="form-label">
+                Name: 
+            </div>
+            <div class="flex-col input-col">
+                <input type="spatial" name="spatial_coverage_name" id="spatial_coverage_name" value="{prefilled_data.get('areaServed', {}).get("name", '')}" readonly>
+            </div>
+        </div>
+        <div class="flex-row">
+            <div class="form-label">
+                MRGID: 
+            </div>
+            <div class="flex-col input-col">    
+                <input type="text" name="spatial_coverage_identifier" id="spatial_coverage_identifier" value="{prefilled_data.get('areaServed', {}).get("identifier", '')}" readonly>
+                <button type="button" onclick="clearMarineRegions()" style="width: 40%;">Clear Location</button>
+            </div>
+        </div>
         <br><br>
         """
         wkt_value = prefilled_data.get('areaServed', {}).get("geo", {}).get("geosparql:asWKT", {}).get("@value", "")
@@ -408,7 +538,7 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
         form_html += f"""
         <a>Draw Bounding Area</a>
         <div id="map" style="width: 80vw; max-width: 100%; height: 50vh;"></div>
-        <div class="flex-col" style="max-width:600px;">
+        <div class="flex-col" style="align-items: center;">
             <div class="flex-row">
                 <div class="flex-col">
                     <label for="maxy" id="maxy">North (max latitude):</label>
@@ -433,7 +563,22 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
                 <button type="button" onclick="clearBoundingCoordinates()">Clear Bounding Coordinates</button>
             </div>
         </div>
-
+        <br>
+        """
+        
+        ## Provide custom WKT string
+        wkt_previous = prefilled_data.get('areaServed', {}).get("geosparql:hasGeometry", {}).get("geosparql:asWKT", {}).get("@value", "")
+        form_html += f"""
+        <div class="flex-row">
+            <div class="form-label">
+                WKT String: <span class='info-circle' data-tooltip='Optionally provide a WKT string that captures the general sampling area. Please ensure the string uses EPSG:4326.'>ⓘ</span>
+            </div>
+            <div class="flex-col input-col">    
+                <input type="text" name="wktstring" id="wktstring" value="{wkt_previous}" placeholder="POLYGON ((-64.8 32.3, -65.5 18.3, -80.3 25.2, -64.8 32.3))">
+                <div class='previous'><strong>Previously entered:</strong> {wkt_previous or 'N/A'}</div>
+                <div>Well-Known Text (WKT) strings are a text format to respresent spatial geometries (e.g. points, lines, polygons). For help generating WKT strings, see <a href="https://wktmap.com/">https://wktmap.com/</a></div>
+            </div>
+        </div>
         """
         form_html += "<hr style='border: none; border-bottom: dashed 2px #002366; '>"
 
@@ -489,14 +634,15 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
                             property_id = ", ".join(property_id)
                         option_value = f"{option['name']}|{property_id}"
                         html += f"<input type='checkbox' name='{field_key}' value='{option_value}' {checked}> {option['name']}<br>"
-                    html += "</div><br>"
+                    html += "</div>"
                 # elif field.get("type") == "text":  # Text input handling
                 #     html += f"<label for='{field_key}'>{field.get('name', 'Unknown Field')}</label>"
                 #     html += f"<input type='text' name='{field_key}' id='{field_key}' value='{value}'>"
             return html
 
         # Render the EOV section
-        form_html += "<h2>EOV info<span class='info-circle' data-tooltip='For each section below, check the variables measured'>ⓘ</span></h2>"
+        form_html += "<h2>EOV Information<span class='info-circle' data-tooltip='For each section below, check the EOVs that are monitored.'>ⓘ</span></h2>"
+        form_html += "In this section, please provide information all EOVs, sub-variables, etc. that are monitored, measured, or relevant for your entry. Please also include information on which observing approaches, platforms, and/or technologies are used. EOVs are defined by GOOS, and sub-variables are listed in corresponding specification sheets. See <a href='https://goosocean.org/what-we-do/framework/essential-ocean-variables/' target='_blank'>here</a>."
         eov_fields = form_schema["categories_definition"]["variable_measured"]["fields"]
         form_html += process_fields(eov_fields, prefilled_data)
 
@@ -511,16 +657,15 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
 
         # Get platform options from schema
         platform_options = form_schema["categories_definition"]["measurementTechnique"]["fields"]["measurement_platforms"]["options"]
-
-        form_html += "<h3>Measurement Platforms</h3>"
+        form_html += "<h3>Sampling approach <span class='info-circle' data-tooltip='Sampling approach, or measurement platforms, include any observing approach, platforms and/or technologies used to collect information about EOVs.'>ⓘ</span></h3>"
         platforms_display = ', '.join([p.split('|')[0] for p in selected_platforms]) if selected_platforms else 'N/A'
-        form_html += f"<div class='previous'><strong>Previously entered platforms:</strong> {platforms_display}</div>"
+        form_html += f"<div class='previous'><strong>Previously entered approaches:</strong> {platforms_display}</div>"
         form_html += "<div class='checkbox-container'>"
         for key, option in platform_options.items():
             value = f"{option['name']}|{option.get('propertyID', '')}"
             checked = "checked" if value in selected_platforms else ""
             form_html += f"<input type='checkbox' name='measurement_platforms' value='{value}' {checked}> {option['name']}<br>"
-        form_html += "</div><br>"
+        form_html += "</div>"
 
 
         ### SOP section ###
@@ -533,7 +678,7 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
             is_obps = "yes" if sop.get("isPartOf") else ""
             sop_entries.append({"name": sop_name, "url": sop_url, "is_obps": is_obps})
 
-        form_html += "<label for='sops'><h4> Standard Operating Procedures <span class='info-circle' data-tooltip='Provide a link to any Methods or Standard Operating Procedures (SOPs) used. Check the box to indicate if the methods are listed as a best practice in Ocean Best Practices System (OBPS)'>ⓘ</span></h4></label> "
+        form_html += "<label for='sops'><h3> Standard Operating Procedures <span class='info-circle' data-tooltip='Provide a link to a resource that describes any Methods or Standard Operating Procedures (SOPs) used to monitor the selected EOVs.'>ⓘ</span></h3></label>"
         form_html += "<div class='previous'><strong>Previously entered SOPs: </strong>"
         if sop_entries:
             for sop in sop_entries:
@@ -572,7 +717,7 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
             outputs_entries = []
 
         form_html += "<label for='outputs'><h2>Outputs: <span class='info-circle' data-tooltip='Enter relevant outputs that are related to your entry.'>ⓘ</span></h2></label>"
-        form_html += "<p>Please optionally provide the link to any relevant outputs that are associated with your entry. This may include products, portals, etc. If you have already linked any such outputs with ODIS or the BioEco Portal, you can provide them again here if you wish. Note that datasets published to OBIS would not need to be added here, and you can use the same data producer ID to ensure this entry is linked with OBIS data. </p>"
+        form_html += "<p>Please optionally provide the link to any relevant outputs that are associated with your entry. This may include products, portals, etc. If you have already linked any such outputs with ODIS or the BioEco Portal, you can provide them again here if you wish. Note that datasets published to OBIS would not need to be added here, and you can use the same data producer ID in OBIS metadata to ensure your entry is linked with OBIS data. </p>"
         form_html += "<div class='previous'><strong>Previously entered: </strong>"
         if outputs_entries:
             for offer in outputs_entries:

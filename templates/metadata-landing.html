@@ -4,8 +4,8 @@
 
 {% block content %}
 
-<h1>Submit EOV Metadata</h1>
-    <p>Fill in the form to provide metadata describing your Essential Ocean Variables (EOV) "data producer", which could include monitoring programmes, projects, institutions, etc. Submitting an entry via this application will allow it become visible in both the <a href="https://bioeco.goosocean.org/" target="_blank">GOOS BioEco Portal</a> and the Ocean Data and Information System (ODIS) / <a href="https://oceaninfohub.org/" target="_blank">Ocean Info Hub</a>. Note that as of August 2025 these connections are still a work in progress, as the BioEco Portal is being redesigned. You may still submit entries via this tool.</p>
+<h1>EOV Data Producer Metadata</h1>
+    <p>This form allows you to provide metadata describing your Essential Ocean Variables (EOV) <b>"data producer"</b>, which could include monitoring programmes, projects, institutions, etc. Submitting an entry via this application will allow it become visible in both the <a href="https://bioeco.goosocean.org/" target="_blank">GOOS BioEco Portal</a> and the Ocean Data and Information System (ODIS) / <a href="https://oceaninfohub.org/" target="_blank">Ocean Info Hub</a>. Note that as of August 2025 these connections are still a work in progress, as the BioEco Portal is being redesigned. You may still submit entries via this tool.</p>
     <p><b>All information submitted via this form will become public.</b></p>
     <p>Click the <b>"New entry"</b> button to create a new submission. Please do your best to provide as much information as possible. Required fields are marked with an asterisk *.</p>
     <p>Once submitted, your form entry will be converted into a JSON-LD format and submitted as a GitHub issue to the BioEcoOcean GitHub repository. You can preview the output by clicking the "Print JSON" button on the form page. To update an existing or draft entry, click the <b>"Update an entry"</b> button. When entries are updated, a date is added in a comment.</p>
@@ -14,7 +14,11 @@
     <!-- <p>Confirm your visibility in ODIS by clicking here and searching for your data producer.</p> -->
         
     <h2>Submit data producer metadata:</h2>
-    <p><b>Note: you do NOT need to submit an entry if it is already visible in Ocean Expert, the GOOS BioEco Portal, ODIS, or the Ocean Info Hub.</b> But please ensure those entries are up to date.</p>
+    <p>Before proceeding, please note:<ul>
+        <li><b>You do NOT need to submit an entry if it is already visible in Ocean Expert, the GOOS BioEco Portal, ODIS, or the Ocean Info Hub.</b> But please ensure those entries are up to date.</li>
+        <li>This tool is <b>NOT meant to describe metadata for individual datasets.</b> Metadata describing datasets should accompany the dataset when submitted to OBIS. See <a href="{{ url_for('data') }}" target="_blank">Data Tools</a> for more details.</li>
+    </ul>
+    </p>
     <button><a href="{{ url_for('handle_form_submission') }}" class="button">New entry</a></button>
     <button><a href="{{ url_for('update_entry') }}" class="button">Update an entry</a></button>
     <br><br>

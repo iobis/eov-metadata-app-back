@@ -6,6 +6,13 @@
     <h1 style="font-size: 3em;">EOV Metadata and Data Tools</h1>
     <p style="color: red;"><em>UNDER DEVELOPMENT: aspects of this tool are still in development. Feedback is welcome and can be provided by adding a <a href="https://github.com/BioEcoOcean/metadata-app/issues/new" target="_blank">GitHub issue</a> or reaching out to e.lawrence@unesco.org</em></p>
 
+    Welcome! This application has two main functions: 
+    <ul>
+        <li>1) facilitate metadata submission to the <a href="https://bioeco.goosocean.org/" target="_blank">GOOS BioEco Portal</a> and Ocean Data Information System (ODIS) for <b>EOV data producers</b>,</li>
+        <li>2) provide tools for managing <b>EOV datasets</b> and converting them into Darwin Core, to be submitted to <a href="https://obis.org/" target="_blank">OBIS</a> (Work in progress)</li>
+    </ul>
+    Please note the distinction between data producer metadata and dataset metadata. Data producers ARE the entities that collect information about and monitor EOVs, while datasets are produced FROM data producers. For more information about EOV data management, see the <a href="https://iobis.github.io/eov-data-management/">EOV Data Management Guidelines</a>, which are associated with the GOOS BioEco EOV Specification Sheets.
+
     <h1>Submit EOV Metadata</h1>
     <p>Fill in the form to provide metadata describing any organized monitoring effort for Essential Ocean Variables (EOV). We call these monitoring efforts "data producers", which can include monitoring programmes, projects, institutions, etc. Submitting an entry via this application will allow it become visible in both the <a href="https://bioeco.goosocean.org/" target="_blank">GOOS BioEco Portal</a> and the Ocean Data and Information System (ODIS) / <a href="https://oceaninfohub.org/" target="_blank">Ocean Info Hub</a>. Note that as of August 2025 the connection with these is still a work in progress, as the BioEco Portal is being redesigned. You may still submit entries via this tool.</p>
 
@@ -17,9 +24,10 @@
     <button><a href="{{ url_for('dataproducer') }}" class="button">Add metadata</a></button>
 
     <h1>Coming soon: data tools</h1>
-    <p>Obtain EOV-specific guidance on how to organize data. Tools to convert your data into EOV- and Darwin Core-compliant formats are in development.</p>
-
+    <p>Obtain EOV-specific guidance on how to organize data. Tools to convert your data into EOV- and Darwin Core-compliant formats are in development. Note that these tools will not be a replacement for submitting data to OBIS, but will just make the process easier to do so.</p>
+    <button><a href="{{ url_for('data') }}" class="button">Data Tools</a></button>
     <br>
+    <h1>Feedback & Development</h1>
     <button class="back-button"><a href="https://github.com/BioEcoOcean/metadata-tracking-dev/issues/new" class="button">GitHub: Submit an Issue or Feedback</a></button> 
     <button class="back-button"><a href="https://github.com/BioEcoOcean/metadata-app" class="button">GitHub Repo for app development</a></button>
 

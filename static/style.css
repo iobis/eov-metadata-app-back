@@ -1,5 +1,5 @@
 .content{
-    max-width: 1200px;
+    max-width: 80%;
     margin: 0 auto;
     padding: 3%;
     background: #f2f6ff;
@@ -14,7 +14,7 @@ body {
 }
 h1 {
     font-size: 2rem;
-    font-family: Montserrat
+    font-family: Montserrat, sans-serif;
 }
 button{
     background-color: rgb(74 102 127);

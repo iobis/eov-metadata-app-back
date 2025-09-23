@@ -5,6 +5,8 @@ schema_field_mapping = {
     "description": ("description", str),
     "projid": ("identifier.url", str),
     "projid_type": ("identifier.description", str),
+    "parentOrganization": ("parentOrganization.legalName", str),
+    "parentOrganization_url": ("parentOrganization.url", str),
     "license": ("publishingPrinciples.name", str),
     "datapolicy_name": ("publishingPrinciples.name", str),
     "datapolicy_text": ("publishingPrinciples.text", str),
@@ -27,6 +29,7 @@ schema_field_mapping = {
     "south": ("areaServed.geo.geosparql:asWKT.@value", str),
     "east": ("areaServed.geo.geosparql:asWKT.@value", str),
     "west": ("areaServed.geo.geosparql:asWKT.@value", str),
+    "wktstring": ("areaServed.geosparql:hasGeometry.geosparql:asWKT.@value", str),
 
     # Keywords
     "selected-keywords-json": ("keywords", list),

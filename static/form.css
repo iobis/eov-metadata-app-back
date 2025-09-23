@@ -1,5 +1,5 @@
 .content{
-    max-width: 1200px;
+    max-width: 80%;
     margin: 0 auto;
     padding: 3%;
     background: #f2f6ff;
@@ -17,7 +17,7 @@ a{
 h1 {
     font-size: 2rem;
     color: rgb(10, 23, 78);
-    font-family: Montserrat
+    font-family: Montserrat, sans-serif;
 }
 h2 {
     font-size: 1.75rem;
@@ -63,19 +63,29 @@ label {
 .flex-row {
     display: flex;
     flex-direction: row;
-    align-items: center;
-    gap: 1em;
+    align-items: baseline;
+    gap: 0.5em;
     flex-wrap: wrap;
-    justify-content: space-between;
+    justify-content: left;
+    max-width: 100%;
 }
-
+.form-label {
+    flex: 0 0 30%; /* Fixed width for label column */
+    max-width: 200px;
+    padding-right: 12px;
+    text-align: left;
+}
 .flex-col {
     display: flex;
     flex-direction: column;
     gap: 0.5em;
     justify-content: space-between;
+    max-width: 100%;
 }
-
+.input-col {
+    flex: 1 1 0;
+    min-width: 0;
+}
 button{
     background-color: rgb(51, 82, 110);
     color: #fffefe;
@@ -203,7 +213,7 @@ input[type="checkbox"]{
     border: 1px solid #b7c4d8;
     border-radius: 5px;
     margin-top: 10px;
-    padding: 10px;
+    padding: 5px;
     background-color: white;    
 }
 #regions_table {
@@ -323,6 +333,7 @@ input[type="checkbox"]{
     border: 1px solid #8eb7cb54; /* Optional: Add a border to the container */
     background-color: #8eb7cb18; /* Optional: Add background color */
     width: 90%;
+    margin-bottom: 20px;
 }
 .table-scroll {
     overflow-x: auto;

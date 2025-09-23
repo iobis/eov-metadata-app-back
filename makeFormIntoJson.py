@@ -69,6 +69,14 @@ def makeFormJson():
                 "url": projid_url,
                 "value": value #need to add logic to get the value from the url
             }
+        
+        ## Parent organization
+        if sanitized_data.get("parentOrganization", [""])[0]:
+            schema_entry["parentOrganization"] = {
+                "@type": "Organization",
+                "legalName": sanitized_data.get("parentOrganization", [""])[0],
+                "url": sanitized_data.get("parentOrganization_url", [""])[0]
+                }
 
         ## Get the license field
         license_data = sanitized_data.get("license", [""])[0]
@@ -77,7 +85,6 @@ def makeFormJson():
             "@type": "CreativeWork",
             "name": license_name,
             "url": license_url
-            #"text": "blah"  # add this so that users can input their own license
         }]
         datapolicy_name = sanitized_data.get("datapolicy_name", [""])[0]
         datapolicy_text = sanitized_data.get("datapolicy_text", [""])[0]
@@ -90,6 +97,7 @@ def makeFormJson():
                 "text": datapolicy_text
         })
         schema_entry["publishingPrinciples"] = publishing_principles
+        
         ## Add time coverage
         if sanitized_data.get("temporal_coverage_start", [""])[0]:
             schema_entry["foundingDate"] = sanitized_data.get("temporal_coverage_start", [""])[0]
@@ -120,6 +128,16 @@ def makeFormJson():
                 }
             schema_entry["areaServed"] = [area_served]
         print("bounds: ", north, south, east, west)
+        wktstring = sanitized_data.get("wktstring", [""])[0]
+        if wktstring:
+             schema_entry["areaServed"].append({
+                "geosparql:hasGeometry": {
+                    "geosparql:asWKT": {
+                        "@type": "http://www.opengis.net/ont/geosparql#wktLiteral",
+                        "@value": f"<http://www.opengis.net/def/crs/OGC/1.3/CRS84> {wktstring}"
+                    }
+                }
+            })
 
         ## Add keywords (select & EOVs)
         keywords_list = []
