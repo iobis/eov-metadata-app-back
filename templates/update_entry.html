@@ -7,6 +7,7 @@
     <h1>Update Existing Metadata</h1>
     <button class="back-button"><a href="{{ url_for('dataproducer') }}" class="button">Back</a></button>
     <p>Please ensure all previously filled fields are correctly filled in before the form is submitted. This has been automatically completed for you in most cases, but you should review all fields carefully to ensure there are no errors. Fields left blank in a previous submission will be populated with placeholders. Forms can still be saved as drafts and updated for submission later.</p>
+    <p><span class="required">*</span> = required</p>
     <form method="POST" action="/update_entry">
         <label for="selected_issue">Select an Issue:</label>
         <select id="selected_issue" name="selected_issue">

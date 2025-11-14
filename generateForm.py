@@ -27,8 +27,14 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
         print(f"Actions data: {json.dumps(actions_data, indent=4)}")
         print(f"Frequency data: {json.dumps(frequency_data, indent=4)}")
 
+        # General Information Section (Collapsible)
         form_html += """
-        <h2>General Information</h2>
+        <div class="collapsible-section" id="general-info">
+            <div class="collapsible-header">
+                <h2>General Information</h2>
+                <span class="collapsible-toggle">▼</span>
+            </div>
+            <div class="collapsible-content expanded">
         """
         ### Data Producer Name ###
         form_html += f"""
@@ -130,23 +136,9 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
             
             <button type="button" id="submit-doi-btn" onclick="submitDoiRequest()">Create DOI</button>
             <button type="button" onclick="toggleDoiForm()">Cancel</button>
-        </div><br>
-        <span id="doi-result"></span><br>
+        </div>
+        <span id="doi-result"></span>
         """
-
-        ### Description ###
-        form_html += f"""
-        <div class="flex-row">
-            <div class="form-label">
-                <label for='description'>Description: <span class="info-circle" data-tooltip="Provide a brief description of the project.">ⓘ</span></label>
-            </div>
-            <div class="flex-col input-col">
-                <textarea name='description' id='description' maxlength="2000" placeholder="BioEcoOcean was funded by the European Union under grant agreement No. 101136748 with 5.7 million EUR to address this challenge. Over the course of 4 years, from February 2024 to January 2027, a consortium of 9 European partners aims to create, and demonstrate the value of, a globally applicable Blueprint for Integrated Ocean Science (BIOS).">{prefilled_data.get('description', '')}</textarea>
-                <div class='previous'><strong>Previously entered:</strong> {prefilled_data.get('description', 'N/A')}</div>
-            </div>
-        </div><br>
-        """
-
         # Parent organization
         form_html += f"""
         <label for='parentOrganization'>Parent Organization: <span class="info-circle" data-tooltip="Provide the name and URL of the parent or administering organization, if applicable.">ⓘ</span></label>
@@ -168,6 +160,18 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
             <div class="flex-col input-col">
                 <input type='text' name='parentOrganization_url' id='parentOrganization_url' value="{prefilled_data.get('parentOrganization.url', '')}" placeholder="https://argo.ucsd.edu/about/">
                 <div class='previous'><strong>Previously entered:</strong> {prefilled_data.get('parentOrganization.url', 'N/A')}</div>
+            </div>
+        </div><br>
+        """
+        ### Description ###
+        form_html += f"""
+        <div class="flex-row">
+            <div class="form-label">
+                <label for='description'>Description: <span class="info-circle" data-tooltip="Provide a brief description of the project.">ⓘ</span></label>
+            </div>
+            <div class="flex-col input-col">
+                <textarea name='description' id='description' maxlength="2000" placeholder="BioEcoOcean was funded by the European Union under grant agreement No. 101136748 with 5.7 million EUR to address this challenge. Over the course of 4 years, from February 2024 to January 2027, a consortium of 9 European partners aims to create, and demonstrate the value of, a globally applicable Blueprint for Integrated Ocean Science (BIOS).">{prefilled_data.get('description', '')}</textarea>
+                <div class='previous'><strong>Previously entered:</strong> {prefilled_data.get('description', 'N/A')}</div>
             </div>
         </div><br>
         """
@@ -304,28 +308,6 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
         frequency_options = form_schema["categories_definition"]["frequency"]["options"]
         sampling_freq_value = actions_data.get('description', '')
 
-        form_html += f"""
-        <div class="flex-row">
-            <div class="form-label">
-                <label for='sampling_frequency'>Sampling frequency:<span class='info-circle' data-tooltip='Select the frequency at which field sampling occurs.'>ⓘ</span></label>
-            </div>
-            <div class="flex-col input-col">
-                <select name="sampling_frequency" id="sampling_frequency">
-                    <option value="" disabled {'selected' if not sampling_freq_value else ''}>Select an option</option>
-        """
-
-        for key, option in frequency_options.items():
-            selected = "selected" if sampling_freq_value == key else ""
-            form_html += f"<option value='{key}' {selected}>{option['name'].title()}</option>"
-
-        form_html += f"""
-                </select>
-                <div class='previous'><strong>Previously entered:</strong> {sampling_freq_value if sampling_freq_value else 'N/A'}</div>
-            </div>
-        </div>
-        <br>
-        """
-
         ### Update frequency ###
         update_freq_value = frequency_data.get('frequency', '')
 
@@ -347,10 +329,23 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
                 </select>
                 <div class='previous'><strong>Previously entered:</strong> {update_freq_value if update_freq_value else 'N/A'}</div>
             </div>
-        </div><br>
+        </div>
+        """       
+        # Close General Information section
+        form_html += """
+            </div>
+        </div>
         """
-        form_html += "<hr style='border: none; border-bottom: dashed 2px #002366; '>"
 
+        # Contact Information Section (Collapsible)
+        form_html += """
+        <div class="collapsible-section" id="contact-info">
+            <div class="collapsible-header">
+                <h2>Contact Information</h2>
+                <span class="collapsible-toggle">▼</span>
+            </div>
+            <div class="collapsible-content">
+        """
         ### Contact Information ###
         # Note to self add a flex box so I can add labels to the input boxes
         form_html += f"""
@@ -421,12 +416,23 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
             """
         form_html += """
         <button type="button" onclick="addContactInput()">Add Contact</button>
-        <br><br>
+        <br>
         """
-        form_html += "<hr style='border: none; border-bottom: dashed 2px #002366; '>"
+        # Close Contact Information section
+        form_html += """
+            </div>
+        </div>
+        """
 
         ### Coverage ###
-        form_html += "<h2>Coverage</h2>"
+        form_html += """
+        <div class="collapsible-section" id="coverage">
+            <div class="collapsible-header">
+                <h2>Coverage</h2>
+                <span class="collapsible-toggle">▼</span>
+            </div>
+            <div class="collapsible-content">
+        """
         
         # Temporal coverage
         form_html += f"""
@@ -580,9 +586,23 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
             </div>
         </div>
         """
-        form_html += "<hr style='border: none; border-bottom: dashed 2px #002366; '>"
+        
+        # Close Coverage section
+        form_html += """
+            </div>
+        </div>
+        """
 
         ### EOVs and Variables ###
+        # EOV Information Section (Collapsible)
+        form_html += """
+        <div class="collapsible-section" id="eov-info">
+            <div class="collapsible-header">
+                <h2>EOV Information</h2>
+                <span class="collapsible-toggle">▼</span>
+            </div>
+            <div class="collapsible-content">
+        """
         # Need to get the EOV names from the schema to cross reference with form output. Will use this to prepopulate checkboxes
         def extract_eov_groups(form_schema):
             fields = form_schema["categories_definition"]["variable_measured"]["fields"]
@@ -646,6 +666,43 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
         eov_fields = form_schema["categories_definition"]["variable_measured"]["fields"]
         form_html += process_fields(eov_fields, prefilled_data)
 
+        # Close EOVs Information section
+        form_html += """
+            </div>
+        </div>
+        """
+        
+        # Sampling Information Section (Collapsible)
+        form_html += """
+        <div class="collapsible-section" id="sampling-info">
+            <div class="collapsible-header">
+                <h2>Sampling Information</h2>
+                <span class="collapsible-toggle">▼</span>
+            </div>
+            <div class="collapsible-content">
+        """
+        ### Sampling frequency ###
+        form_html += f"""
+        <div class="flex-row">
+            <div class="form-label">
+                <label for='sampling_frequency'>Sampling frequency:<span class='info-circle' data-tooltip='Select the frequency at which field sampling occurs.'>ⓘ</span></label>
+            </div>
+            <div class="flex-col input-col">
+                <select name="sampling_frequency" id="sampling_frequency">
+                    <option value="" disabled {'selected' if not sampling_freq_value else ''}>Select an option</option>
+        """
+        
+        for key, option in frequency_options.items():
+            selected = "selected" if sampling_freq_value == key else ""
+            form_html += f"<option value='{key}' {selected}>{option['name'].title()}</option>"
+
+        form_html += f"""
+                </select>
+                <div class='previous'><strong>Previously entered:</strong> {sampling_freq_value if sampling_freq_value else 'N/A'}</div>
+            </div>
+        </div>
+        <br>
+        """
         ### Platforms ###
         instruments = actions_data.get("instrument", [])
         selected_platforms = []
@@ -666,7 +723,6 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
             checked = "checked" if value in selected_platforms else ""
             form_html += f"<input type='checkbox' name='measurement_platforms' value='{value}' {checked}> {option['name']}<br>"
         form_html += "</div>"
-
 
         ### SOP section ###
         # use the prefilled potential_actions as above
@@ -701,10 +757,22 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
                 """
         form_html += "</div>"
         form_html += '<button type="button" onclick="addSOPInput()">Add a SOP link</button><br>'
-
-        form_html += "<hr style='border: none; border-bottom: dashed 2px #002366; '>"
-
+        
+        # Close Sampling Information section
+        form_html += """
+            </div>
+        </div>
+        """
         ### Outputs section ###
+        # Outputs Section (Collapsible)
+        form_html += """
+        <div class="collapsible-section" id="outputs">
+            <div class="collapsible-header">
+                <h2>Outputs</h2>
+                <span class="collapsible-toggle">▼</span>
+            </div>
+            <div class="collapsible-content">
+        """
         outputs = prefilled_data.get("makesOffer", [])
         outputs_entries = []
         if isinstance(outputs, list):
@@ -740,11 +808,22 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
             """
         form_html += "</div>"
         form_html += '<button type="button" onclick="addOutputInput()">Add an Output</button><br>'
-
-        form_html += "<hr style='border: none; border-bottom: dashed 2px #002366; '>"
-
+        # Close Outputs section
+        form_html += """
+            </div>
+        </div>
+        """
         ### Funding section ###
-        form_html += "<label for='funder-container'><h2>Funding Information <span class='info-circle' data-tooltip='Provide information about funding organizations and awards.'>ⓘ</span></h2></label>"
+        # Funding Information Section (Collapsible)
+        form_html += """
+        <div class="collapsible-section" id="funding">
+            <div class="collapsible-header">
+                <h2>Funding Information</h2>
+                <span class="collapsible-toggle">▼</span>
+            </div>
+            <div class="collapsible-content">
+        """
+        form_html += "<h2>Funding Information <span class='info-circle' data-tooltip='Provide information about funding organizations and awards.'>ⓘ</span></h2>"
         form_html += "<p>Please provide information about the funding that supports your entry.</p>"
 
         funding_data = prefilled_data.get("funding", [])
@@ -804,6 +883,10 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
             """
         form_html += '<button type="button" onclick="addFunders()">Add a Funder</button><br>'
 
-        form_html += "<hr style='border: none; border-bottom: dashed 2px #002366; '>"
+        # Close Funding Information section
+        form_html += """
+            </div>
+        </div>
+        """
 
         return form_html

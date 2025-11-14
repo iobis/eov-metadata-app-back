@@ -6,7 +6,8 @@
 
     <h1>Submit BioEco Metadata</h1>
     <p>Fill the form below, ensuring required fields are populated, and then submit. Examples are provided in placeholders. Forms can also be saved as drafts and updated for submission later using the "Update entry" button on the previous page. The "Print JSON" button will display the current form data in JSON-LD format.</p>
-    <button class="back-button"><a href="{{ url_for('dataproducer') }}" class="button">Back</a></button>
+    <button class="back-button"><a href="{{ url_for('dataproducer') }}" class="button">Back</a></button><br>
+    <p><span class="required">*</span> = required</p>
     <form method="POST" action="/submit" onsubmit="return validateForm();">
         {{ form_html|safe }}
         

@@ -425,6 +425,125 @@ input[type="checkbox"]{
     background-color: #0056b3; /* Darker blue on hover */
     opacity: 0.8;
 }
+/* Collapsible sections */
+.collapsible-section {
+    margin-bottom: 1.5em;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.collapsible-header {
+    background-color: #e8f4f8;
+    padding: 1em 1.5em;
+    cursor: pointer;
+    border-bottom: 1px solid #ddd;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background-color 0.3s ease;
+    user-select: none;
+}
+
+.collapsible-header:hover {
+    background-color: #d1e7f0;
+}
+
+.collapsible-header h2,
+.collapsible-header h3 {
+    margin: 0;
+    color: #275e9c;
+    font-size: 1.5rem;
+}
+
+.collapsible-header h3 {
+    font-size: 1.25rem;
+    color: #36768f;
+}
+
+.collapsible-toggle {
+    font-size: 1.2em;
+    color: #275e9c;
+    transition: transform 0.3s ease;
+    font-weight: bold;
+}
+
+.collapsible-toggle.expanded {
+    transform: rotate(180deg);
+}
+
+.collapsible-content {
+    padding: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+    background-color: white;
+}
+
+.collapsible-content.expanded {
+    padding: 1.5em;
+    max-height: 80vh; /* Use viewport height for better responsiveness */
+    overflow-y: auto; /* Add vertical scrollbar when content overflows */
+    overflow-x: hidden; /* Prevent horizontal scrollbar */
+}
+
+/* Custom scrollbar styling for collapsible content */
+.collapsible-content.expanded::-webkit-scrollbar {
+    width: 8px;
+}
+
+.collapsible-content.expanded::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.collapsible-content.expanded::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+    transition: background 0.3s ease;
+}
+
+.collapsible-content.expanded::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Firefox scrollbar styling */
+.collapsible-content.expanded {
+    scrollbar-width: thin;
+    scrollbar-color: #c1c1c1 #f1f1f1;
+}
+
+.collapsible-content .form-group {
+    margin-bottom: 1em;
+}
+
+/* Ensure form elements inside collapsible sections work properly */
+.collapsible-content .flex-row {
+    margin-bottom: 1em;
+}
+
+/* Nested collapsible sections */
+.collapsible-content .collapsible-section {
+    margin-bottom: 1em;
+    border: 1px solid #e0e0e0;
+}
+
+.collapsible-content .collapsible-header {
+    background-color: #f0f8ff;
+    padding: 0.8em 1em;
+}
+
+.collapsible-content .collapsible-header:hover {
+    background-color: #e6f3ff;
+}
+
+.collapsible-content .collapsible-header h3 {
+    font-size: 1.1rem;
+    color: #36768f;
+}
+
 /* Responsive adjustments */
 @media (max-width: 600px) {
     body {
@@ -497,5 +616,28 @@ input[type="checkbox"]{
     }
     #toBottomButton {
         bottom: 20px;
+    }
+    
+    /* Collapsible sections responsive */
+    .collapsible-header {
+        padding: 0.8em 1em;
+    }
+    
+    .collapsible-header h2 {
+        font-size: 1.2rem;
+    }
+    
+    .collapsible-header h3 {
+        font-size: 1.1rem;
+    }
+    
+    .collapsible-content.expanded {
+        padding: 1em;
+        max-height: 70vh; /* Slightly smaller on mobile */
+    }
+    
+    /* Mobile scrollbar adjustments */
+    .collapsible-content.expanded::-webkit-scrollbar {
+        width: 6px; /* Thinner scrollbar on mobile */
     }
 }
