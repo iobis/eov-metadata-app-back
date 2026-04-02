@@ -28,7 +28,15 @@ def makeFormJson():
         print("san data: ", sanitized_data)
 
         # Mappings
-        schema_entry = map_form_to_schema(sanitized_data, schema_field_mapping, base_type="Project")
+        mapped_schema_entry = map_form_to_schema(sanitized_data, schema_field_mapping, base_type="Project")
+        schema_entry.update(mapped_schema_entry)
+
+        # Ensure @context and @type are preserved
+        schema_entry.setdefault("@context", {
+            "@vocab": "https://schema.org/",
+            "geosparql": "http://www.opengis.net/ont/geosparql#"
+        })
+        schema_entry.setdefault("@type", "Project")
         actions_json = map_form_to_schema(sanitized_data, actions_field_mapping, base_type="Action")
         metadata_frequency = map_form_to_schema(sanitized_data, frequency_field_mapping)
 
@@ -130,7 +138,14 @@ def makeFormJson():
         print("bounds: ", north, south, east, west)
         wktstring = sanitized_data.get("wktstring", [""])[0]
         if wktstring:
-             schema_entry["areaServed"].append({
+            # Ensure areaServed is a list before appending
+            if "areaServed" not in schema_entry:
+                schema_entry["areaServed"] = []
+            elif not isinstance(schema_entry["areaServed"], list):
+                # If it's a dict (from mapping), convert to list
+                schema_entry["areaServed"] = [schema_entry["areaServed"]]
+            
+            schema_entry["areaServed"].append({
                 "geosparql:hasGeometry": {
                     "geosparql:asWKT": {
                         "@type": "http://www.opengis.net/ont/geosparql#wktLiteral",
