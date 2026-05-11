@@ -1,25 +1,28 @@
 from datetime import datetime
 import json
+import base64
 import requests
 import os
 from flask import jsonify, request, session, redirect, url_for
+from helpers import github_request
 
 # Function to handle the action based on the form submission
-def process_submission_action(issue_number, action, schema_entry, actions_json, metadata_frequency, GITHUB_API_URL, REPO_OWNER, GITHUB_REPO): 
+def process_submission_action(issue_number, action, output, GITHUB_API_URL, REPO_OWNER, GITHUB_REPO): 
     if action == "print_json":
         # Print JSON for testing
-        print(schema_entry)
-        return jsonify({"success": True, "printed_json": schema_entry, "actions_json": actions_json, "metadata_frequency": metadata_frequency})
-
-    GITHUB_TOKEN = session.get("github_oauth_token", {}).get("access_token")
-    if not GITHUB_TOKEN:
-        GITHUB_TOKEN = session.get("github_oauth_token", {}).get("access_token")
-        print("GitHub token:", GITHUB_TOKEN)
-        if not GITHUB_TOKEN:
-            return jsonify({"success": False, "error": "GitHub token not found in session"}), 401
-
-    # Prepare issue title and body for GitHub submission
-    issue_title = f"New Submission: {schema_entry.get('name') or schema_entry.get('legalName') or 'Untitled EOV Metadata Entry'}"
+        print(output)
+        return jsonify({"success": True, "printed_json": output})
+    
+    # Extract title from the first item in @graph (schema_entry)
+    schema_entry = output["@graph"][0]
+    issue_title = f"New Submission: {schema_entry.get('schema:name') or schema_entry.get('schema:legalName') or 'Untitled EOV Metadata Entry'}"
+    
+    # Get the current user who is creating the issue
+    user = session.get("user")
+    created_by = user.get("login") if user else "unknown"
+    created_at = datetime.now().isoformat()
+    
+    # Prepare issue body with full @graph output and ownership metadata
     issue_body = (
         "### Metadata Submission\n"
         "```json\n"
@@ -49,27 +52,32 @@ def process_submission_action(issue_number, action, schema_entry, actions_json, 
     # Save a draft to GitHub
     if action == "save_draft":
         # Create a new issue labeled as Draft
-        response = requests.post(
+        response, redirect_response = github_request(
+            github, session, "post",
             GITHUB_API_URL.format(owner=REPO_OWNER, repo=GITHUB_REPO),
-            json=payload,
-            headers=headers
+            json=payload
         )
+        if redirect_response:
+            return {"success": False, "error": "Authentication required", "reauth_required": True}, 401
+        
         if response.status_code == 201:
             issue_url = response.json()["html_url"]
             if "draft submission" not in [lbl["name"] for lbl in response.json().get("labels", [])]:
                 print("User does not have permission to add labels. Using admin token as fallback.")
                 fallback_add_labels(response.json().get("number"), REPO_OWNER, GITHUB_REPO, labels[0])
-            return {"success": True, "message": "Draft saved successfully!", "issue_url": issue_url}
+            return {"success": True, "message": f"Draft saved successfully and assigned to {created_by}!", "issue_url": issue_url}
         else:
             return {"success": False, "error": response.json()}
     
     # Submit to GitHub API
     if action == "submit_to_github":
-        response = requests.post(
+        response, redirect_response = github_request(
+            github, session, "post",
             GITHUB_API_URL.format(owner=REPO_OWNER, repo=GITHUB_REPO),
-            json=payload,
-            headers=headers
+            json=payload
         )
+        if redirect_response:
+            return {"success": False, "error": "Authentication required", "reauth_required": True}, 401
 
         # Log the response for debugging
         print(f"GitHub API Response Status: {response.status_code}")
@@ -81,8 +89,7 @@ def process_submission_action(issue_number, action, schema_entry, actions_json, 
             if "metadata submission" not in [lbl["name"] for lbl in response.json().get("labels", [])]:
                 print("User does not have permission to add labels. Using admin token as fallback.")
                 fallback_add_labels(response.json().get("number"), REPO_OWNER, GITHUB_REPO, labels[0])
-            return {"success": True, "message": "Issue submitted successfully!", "issue_url": issue_url}
-            #return jsonify({"success": True, "issue_url": response.json()["html_url"]})
+            return {"success": True, "message": f"Issue submitted successfully and assigned to {created_by}!", "issue_url": issue_url}
         else:
             return {"success": False, "error": response.json()}, response.status_code
             #return jsonify({"success": False, "error": response.json()}), response.status_code

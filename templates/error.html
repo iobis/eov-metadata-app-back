@@ -9,6 +9,9 @@
     {% if details %}
     <pre><strong>Details:</strong> {{ details }}</pre>
     {% endif %}
+    <button class="back-button"><a href="javascript:window.history.back()"  class="button">Back</a></button>
+    <br><br>
     <button class="back-button"><a href="{{ url_for('home') }}"  class="button">Back to home</a></button>
+    
 
 {% endblock %}

@@ -1,19 +1,56 @@
-from flask import Flask, session, render_template, request, jsonify, url_for, redirect, send_file
-from dotenv import load_dotenv
-import os, tempfile, subprocess, zipfile
-load_dotenv()
+from flask import Flask, session, render_template, request, jsonify, url_for, redirect, send_file, flash
+
 
 from flask_dance.contrib.github import make_github_blueprint, github
 from flask_session import Session
 #from redis import Redis
-import json
+import os
 import requests
+import tempfile
+import zipfile
+import json
 import pandas as pd
 import re
 import csv
 import io
 import platform #for running locally
 from flask_caching import Cache
+from datetime import datetime, timedelta
+from werkzeug.middleware.proxy_fix import ProxyFix
+from werkzeug.exceptions import HTTPException
+from urllib.parse import quote, unquote
+import logging
+#### Custom imports
+from helpers import (
+    set_flask_environment,
+    setup_token_logger,
+    configure_flask_file_logging,
+    log_token_creation,
+    get_github_issues,
+    fetch_projects_from_github,
+    get_or_fetch_user,
+    extract_json_blocks,
+    strip_schema_org_prefixes,
+    split_metadata_submission_graph,
+    redirect_to_error,
+    get_token_or_redirect,
+    github_request,
+    is_admin,
+    can_view_entry,
+    extract_issue_owner,
+    load_bioeco_entries_with_access_control
+)
+from config_constants import (
+    REPO_OWNER,
+    BRANCH,
+    JSON_FOLDER,
+    GITHUB_REPO,
+    GITHUB_API_URL,
+    RAW_BASE_URL,
+    EOV_USER,
+    EOV_PASS,
+    ADMIN_USERS
+)
 from mappings import schema_field_mapping, actions_field_mapping, frequency_field_mapping
 from processMappings import map_form_to_schema
 from generateForm import generate_form
@@ -26,8 +63,12 @@ from dois import ObisDoi
 from convert_to_dwc import convert_to_dwc as run_dwc_conversion
 from urllib.parse import quote, unquote
 
+# ============================================================================
+# Application Setup
+# ============================================================================
 app = Flask(__name__)
 set_flask_environment(app=app)
+configure_flask_file_logging(app)
 # Add ProxyFix middleware to handle headers from Nginx
 app.wsgi_app = ProxyFix(
     app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1
@@ -53,23 +94,24 @@ github_blueprint=make_github_blueprint(
     )
 app.register_blueprint(github_blueprint, url_prefix="/login")
 
-if platform.system() == "Windows":
-    R_PATH = r"C:\Program Files\R\R-4.4.2\bin\Rscript.exe"  # adjust to your machine
-else:
-    R_PATH = "Rscript" 
+# ============================================================================
+# Token Management Setup
+# ============================================================================
+token_logger = setup_token_logger()
+_token_stats = {
+    'tokens_created': 0,
+    'tokens_validated': 0,
+    'tokens_refreshed': 0,
+    'tokens_failed': 0,
+    'token_usage_count': {},
+    'last_token_created': None
+}
 
-EOV_USER = os.getenv("EOV_USER")
-EOV_PASS = os.getenv("EOV_PASS")
+# Removed get_github_token_wrapper - use get_token_or_redirect or github_request instead
 
-# GitHub URLS 
-REPO_OWNER = "BioEcoOcean"
-GITHUB_REPO = "metadata-tracking-dev"
-BRANCH = "refs/heads/main"
-JSON_FOLDER = "jsonFiles"
-GITHUB_API_URL = f"https://api.github.com/repos/{REPO_OWNER}/{GITHUB_REPO}/issues"
-GITHUB_API_JSONS = f"https://api.github.com/repos/{REPO_OWNER}/{GITHUB_REPO}/contents/{JSON_FOLDER}"
-RAW_BASE_URL = f"https://raw.githubusercontent.com/{REPO_OWNER}/{GITHUB_REPO}/{BRANCH}/{JSON_FOLDER}"
-
+# ============================================================================
+# App routes
+# ============================================================================
 @app.route("/")
 def index():
     """ Landing page"""
@@ -77,19 +119,9 @@ def index():
     if not github.authorized:
         return render_template("landing.html", user=None)
     
-    user = session.get("user")
-    #session["GITHUB_TOKEN"] = github.token["access_token"]
+    user = get_or_fetch_user(github, session)
     if not user:
-        # Fetch user info from GitHub if not in session
-        print("Calling GitHub API on landing page...", flush=True) # debugging why hanging
-        resp = github.get("/user", timeout=10)
-        print("GitHub API responded", flush=True)
-        if not resp.ok:
-            return redirect(url_for('index'))
-        
-        user_info = resp.json()
-        session["user"] = user_info
-        print("User Info Fetched and Saved:", session["user"], flush=True)
+        return redirect(url_for('index'))
     return redirect(url_for("home"))
 
 @app.route('/github/authorized')
@@ -99,17 +131,26 @@ def github_authorized():
         # Redirect to login if not authorized
         return redirect(url_for("github.login"))
 
+    # Log token creation
+    log_token_creation(github, session, token_logger, _token_stats)
+
     # Fetch user info from GitHub
     resp = github.get("/user")
     print("GitHub user Info:", resp, flush=True)
     if not resp.ok:
+        token_logger.error(f"Failed to fetch user info after OAuth: {resp.status_code}")
         return redirect(url_for('index')) 
 
     # Store user info in session
     user_info = resp.json()
     session["user"] = user_info
-    #session["GITHUB_TOKEN"] = github.token["access_token"]
-    #print("User Info & token Saved:", session["user"], session["GITHUB_TOKEN"], flush=True)
+    
+    # Token is already stored by Flask-Dance, no need to store separately
+    token, _ = get_token_or_redirect(github, session)
+    if token:
+        # Don't log full token preview in console output
+        print(f"User Info & token Saved: {user_info.get('login')}", flush=True)
+    
     return redirect(url_for('home'))
 
 @app.route("/data")
@@ -122,24 +163,14 @@ def about():
 
 @app.route("/dataproducer")
 def dataproducer():
-    user = session["user"]
+    user = get_or_fetch_user(github, session)
     if not user:
-        # Fetch user info from GitHub if not in session
-        resp = github.get("/user")
-        if not resp.ok:
-            return redirect(url_for('index'))
-        
-        user_info = resp.json()
-        session["user"] = user_info
-        print("User Info Fetched and Saved:", session["user"], flush=True)
+        return redirect(url_for('index'))
     
-    # Retrieve the token from the session
-    github_token = session.get("GITHUB_TOKEN")
-    if not github_token:
-        github_token = session.get("github_oauth_token", {}).get("access_token")
-        if github_token:
-            session["GITHUB_TOKEN"] = github_token
-    print("GITHUB_TOKEN from session:", github_token, flush=True)
+    # Get token or redirect - simple check
+    token, redirect_response = get_token_or_redirect(github, session)
+    if redirect_response:
+        return redirect_response
 
     projects = cache.get('projects')
     if projects is None:
@@ -155,10 +186,19 @@ def home():
     
     # Fetch user data from session instead of making a new GitHub API request
     print("GitHub Authorized:", github.authorized, flush=True)
-    print("Session User homeroute:", session["user"], flush=True)
+    print("Session User homeroute:", session.get("user"), flush=True)
 
-    user = session["user"]
+    user = get_or_fetch_user(github, session)
     if not user:
+        return redirect(url_for('index'))
+    
+    # Get token or redirect - simple check
+    token, redirect_response = get_token_or_redirect(github, session)
+    if redirect_response:
+        return redirect_response
+    
+    return render_template("home.html", user=session.get("user"), admin_users=ADMIN_USERS)
+
         # Fetch user info from GitHub if not in session
         resp = github.get("/user")
         if not resp.ok:
@@ -199,7 +239,12 @@ def get_github_issues():
                 return []  # Return an empty list in case of failure
     except Exception as e:
         print(f"Error fetching issues: {e}")
-        return []  # Return an empty list in case of an error
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("index"))
 
 @app.route("/handle_form_submission", methods=["GET", "POST"])
 def handle_form_submission():
@@ -244,6 +289,16 @@ def handle_submission():
 
     # Handle save draft action
     if action == "save_draft":
+        # Check if re-authentication is required
+        if isinstance(result, tuple) and len(result) == 2:
+            result_dict, status_code = result
+            if result_dict.get("reauth_required"):
+                result_dict["reauth_url"] = url_for("github.login")
+                return jsonify(result_dict), status_code
+        elif isinstance(result, dict) and result.get("reauth_required"):
+            result["reauth_url"] = url_for("github.login")
+            return jsonify(result), 401
+        
         if result.get("success"):
             message = result.get("message", "Draft saved successfully!")
             issue_url = result.get("issue_url")
@@ -251,10 +306,20 @@ def handle_submission():
         else:
             error_message = result.get("error", "An unexpected error occurred.")
             error_details = result.get("details", None)
-            return render_template("error.html", error=error_message, details=error_details)   
+            return redirect_to_error(error_message, error_details)
 
     # Return the appropriate response based on the result from the function
     if action in ["submit_to_github", "update_github"]:  # Check if the action was a submission
+        # Check if re-authentication is required
+        if isinstance(result, tuple) and len(result) == 2:
+            result_dict, status_code = result
+            if result_dict.get("reauth_required"):
+                result_dict["reauth_url"] = url_for("github.login")
+                return jsonify(result_dict), status_code
+        elif isinstance(result, dict) and result.get("reauth_required"):
+            result["reauth_url"] = url_for("github.login")
+            return jsonify(result), 401
+        
         if result.get("success"):
             message = result.get("message", "Action completed successfully!")
             issue_url = result.get("issue_url")
@@ -262,7 +327,7 @@ def handle_submission():
         else:
             error_message = result.get("error", "An unexpected error occurred.")
             error_details = result.get("details", None)  # Include additional details if available
-            return render_template("error.html", error=error_message, details=error_details)
+            return redirect_to_error(error_message, error_details)
     else:
         return result
 
@@ -274,8 +339,11 @@ def success():
 @app.route("/update_entry", methods=["GET", "POST"])
 def update_entry():
     print(">>> ", request.method)
-    GITHUB_TOKEN = session.get("github_oauth_token", {}).get("access_token")
-    issues = get_github_issues()
+    issues, redirect_response = get_github_issues(
+        github, session, REPO_OWNER, GITHUB_REPO, token_logger, admin_users=ADMIN_USERS
+    )
+    if redirect_response:
+        return redirect_response
     filtered_issues = [
         issue for issue in issues
         if any(label["name"] in ["metadata submission", "draft submission"] for label in issue.get("labels", []))
@@ -332,16 +400,15 @@ def remove_entry():
     if not github.authorized:
         return redirect(url_for("github.login"))
 
-    user = session.get("user")
+    user = get_or_fetch_user(github, session)
     if not user:
-        resp = github.get("/user")
-        if not resp.ok:
-            return redirect(url_for('index'))
-        user = resp.json()
-        session["user"] = user
+        return redirect(url_for('index'))
 
-    github_token = session.get("github_oauth_token", {}).get("access_token")
-    headers = {"Authorization": f"token {github_token}"}
+    # Get token or redirect - simple check
+    token, redirect_response = get_token_or_redirect(github, session)
+    if redirect_response:
+        return redirect_response
+    headers = {"Authorization": f"Bearer {token}"}
     username = user.get("login")
 
     # Fetch issues created by this user with the "metadata submission" label
@@ -580,52 +647,185 @@ def fetch_projects_from_github():
         projects.sort(key=lambda x: x["name"].lower())
         return projects
     except Exception as e:
-        print(f"Error fetching or parsing CSV: {e}")
-        return []
+        print(f"Error fetching BioEco JSON for {folder_name}: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
-def check_github_token_scopes(token, required_scopes):
-    url = "https://api.github.com/user"
-    headers = {"Authorization": f"token {token}"}
-    print("Calling GitHub API...", flush=True) # debugging why hanging
-    response = requests.get(url, headers=headers, timeout=10)
-    print("GitHub API responded", flush=True)
+@app.route("/token_status")
+def token_status():
+    """
+    Route to check token status and statistics.
+    Useful for debugging token issues.
     
-    if response.status_code == 200:
-        scopes = response.headers.get("X-OAuth-Scopes", "")
-        scopes_set = set(scopes.split(", "))
-        required_scopes_set = set(required_scopes)
-        return required_scopes_set.issubset(scopes_set)
-    else:
-        print(f"Failed to check token scopes: {response.status_code}")
-        return False
-
-def extract_json_blocks(issue_body):
-    # Find all blocks between ```json ... ```
-    blocks = re.findall(r"### (.*?)\n```json\n(.*?)\n```", issue_body, re.DOTALL)
-    result = {}
-    for header, json_str in blocks:
+    SECURITY: Requires authentication. Only shows user's own token info.
+    For admin-level stats, use /token_status/admin (if enabled).
+    """
+    # Require authentication - no stats for unauthorized users
+    if not github.authorized:
+        return jsonify({
+            "authorized": False,
+            "message": "Not authorized. Please log in."
+        }), 401
+    
+    # Simple token check - no validation needed
+    token, redirect_response = get_token_or_redirect(github, session)
+    if redirect_response:
+        return jsonify({
+            "authorized": False,
+            "token_valid": False,
+            "message": "Not authenticated. Please log in."
+        }), 401
+    
+    # Get token info from GitHub - only for current user
+    token_info = {}
+    user_info = session.get("user", {})
+    if token:
         try:
-            result[header.strip()] = json.loads(json_str)
+            response, redirect_response = github_request(github, session, "get", "https://api.github.com/user", timeout=5)
+            if redirect_response:
+                return jsonify({
+                    "authorized": False,
+                    "token_valid": False,
+                    "message": "Token expired. Please log in again."
+                }), 401
+            if response.status_code == 200:
+                scopes = response.headers.get("X-OAuth-Scopes", "")
+                token_info = {
+                    "scopes": scopes.split(", ") if scopes else [],
+                    "rate_limit_remaining": response.headers.get("X-RateLimit-Remaining", "unknown"),
+                    "rate_limit_reset": response.headers.get("X-RateLimit-Reset", "unknown")
+                }
         except Exception as e:
-            result[header.strip()] = None
-    return result
+            token_info = {"error": "Unable to fetch token info"}
+    
+    # Only return user's own token info, not system-wide stats
+    return jsonify({
+        "authorized": True,
+        "token_valid": token is not None,
+        "user": user_info.get("login", "unknown"),
+        "token_info": token_info,
+        "has_token": True
+    })
 
+@app.route("/error")
+def error_page():
+    """
+    Route to manually display an error page.
+    Can be used with query parameters: ?error=message&details=details
+    """
+    error_message = request.args.get("error", "An error occurred")
+    error_details = request.args.get("details", None)
+    return render_template("error.html", error=error_message, details=error_details)
+
+@app.errorhandler(404)
+def not_found_error(error):
+    """Handle 404 Not Found errors"""
+    return render_template("error.html", 
+                         error="Page not found (404)",
+                         details=f"The page you're looking for doesn't exist. URL: {request.url}"), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    """Handle 500 Internal Server errors"""
+    # Log the error
+    app.logger.error(f"Internal Server Error: {str(error)}", exc_info=True)
+    return render_template("error.html",
+                         error="Internal Server Error (500)",
+                         details="An unexpected error occurred. Please try again later."), 500
+
+@app.errorhandler(403)
+def forbidden_error(error):
+    """Handle 403 Forbidden errors"""
+    return render_template("error.html",
+                         error="Access Forbidden (403)",
+                         details="You don't have permission to access this resource."), 403
+
+@app.errorhandler(401)
+def unauthorized_error(error):
+    """Handle 401 Unauthorized errors"""
+    return render_template("error.html",
+                         error="Unauthorized (401)",
+                         details="Please log in to access this resource."), 401
+
+@app.errorhandler(400)
+def bad_request_error(error):
+    """Handle 400 Bad Request errors"""
+    return render_template("error.html",
+                         error="Bad Request (400)",
+                         details="The request was invalid. Please check your input and try again."), 400
+
+@app.errorhandler(405)
+def method_not_allowed_error(error):
+    """Handle 405 Method Not Allowed errors"""
+    return render_template("error.html",
+                         error="Method Not Allowed (405)",
+                         details=f"The {request.method} method is not allowed for this endpoint."), 405
+
+@app.errorhandler(Exception)
+def handle_exception(error):
+    """Handle all unhandled exceptions (except HTTPExceptions which Flask handles)"""
+    # Don't handle HTTPExceptions - let Flask handle those
+    if isinstance(error, HTTPException):
+        return error
+    
+    # Log the error with full traceback
+    app.logger.error(f"Unhandled exception: {str(error)}", exc_info=True)
+    
+    # In production, don't show full error details to users
+    show_details = os.getenv("FLASK_ENV", "production") == "development"
+    
+    error_message = "An unexpected error occurred"
+    error_details = str(error) if show_details else "Please try again later. If the problem persists, contact support at helpdesk@obis.org."
+    
+    return render_template("error.html",
+                         error=error_message,
+                         details=error_details), 500
+
+@app.route("/token_status/admin")
+def token_status_admin():
+    """
+    Admin-only route for system-wide token statistics.
+    Only accessible if ADMIN_TOKEN_STATUS is enabled in environment.
+    """
+    # Check if admin endpoint is enabled
+    if not os.getenv("ADMIN_TOKEN_STATUS", "").lower() == "true":
+        return jsonify({
+            "error": "Admin token status endpoint is disabled"
+        }), 403
+    
+    # Require authentication
+    if not github.authorized:
+        return jsonify({
+            "authorized": False,
+            "message": "Not authorized. Please log in."
+        }), 401
+    
+    # Optional: Check if user is admin (you can add admin user list check here)
+    # admin_users = os.getenv("ADMIN_USERS", "").split(",")
+    # user = session.get("user", {}).get("login", "")
+    # if admin_users and user not in admin_users:
+    #     return jsonify({"error": "Admin access required"}), 403
+    
+    # Simple token check - no validation needed
+    token, redirect_response = get_token_or_redirect(github, session)
+    is_valid = token is not None
+    
+    # Return system-wide stats (sanitized)
+    return jsonify({
+        "authorized": is_valid,
+        "token_valid": is_valid,
+        "stats": {
+            "tokens_created": _token_stats['tokens_created'],
+            "tokens_validated": _token_stats['tokens_validated'],
+            "tokens_failed": _token_stats['tokens_failed'],
+            "unique_tokens_used": len(_token_stats['token_usage_count']),
+            # Don't expose token previews or usage breakdown - too sensitive
+            # "token_usage_breakdown": dict(list(_token_stats['token_usage_count'].items())[:10])
+        },
+        "last_token_created": _token_stats['last_token_created']
+    })
 
 
 
 if __name__ == "__main__":
     app.run(debug=True, host="127.0.0.1", port=5000)  # , ssl_context=("server.crt", "server.key"))
 
-# Removing this route, as Flask-Dance handles the OAuth login automatically apparently
-# @app.route('/github')
-# def login():
-#     """Log in a registered or authenticated user."""
-#     if not github.authorized:
-#         return redirect(url_for('github.login'))
-#     res = github.get('/user')
-#     assert res.ok
-#     return render_template("home.html", user=res)
-    
-    #if res.ok:
-    #    res_json = res.json()
-    #    return redirect(url_for("home")) #f"You are logged in as {res.json()['login']} on GitHub."

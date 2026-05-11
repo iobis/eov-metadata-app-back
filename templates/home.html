@@ -17,11 +17,26 @@
     <p>Fill in the form to provide metadata describing any organized monitoring effort for Essential Ocean Variables (EOV). We call these monitoring efforts "data producers", which can include monitoring programmes, projects, institutions, etc. Submitting an entry via this application will allow it become visible in both the <a href="https://bioeco.goosocean.org/" target="_blank">GOOS BioEco Portal</a> and the Ocean Data and Information System (ODIS) / <a href="https://oceaninfohub.org/" target="_blank">Ocean Info Hub</a>. Note that as of August 2025 the connection with these is still a work in progress, as the BioEco Portal is being redesigned. You may still submit entries via this tool.</p>
 
     <p><img src="{{ url_for('static', filename='images/GitHub_Logo.png') }}" alt="GitHub Logo" height="40px"> You must have a GitHub account to use this tool as submissions are sent to the GitHub repository. Your Github account is displayed below if you are properly logged in. Click the <b>"Add metadata"</b> button below to begin submitting metadata.</p>
-    <h4>Welcome, {{ user["login"] }}, you are logged in.</h4>
-    <a href="{{ url_for('github.login') }}"> <button class="logins">Login with GitHub </button></a>
+    <div class="centrebox">
+    <h4>Welcome, {{ user["login"] }}, you are logged in. 
+    {% if user["login"] in admin_users %}
+        <span style="color: green; font-weight: bold">👤 (Administrator)</span>
+    {% else %}
+        <span style="color: blue;">(Regular User)</span>
+    {% endif %}
+    </h4>
+    <p style="font-size: 0.9em; color: #666;">
+        {% if user["login"] in admin_users %}
+            <strong>As an administrator:</strong> You can view and edit all metadata entries in the system.
+        {% else %}
+            <strong>As a user:</strong> You can only view and edit your own metadata entries.
+        {% endif %}
+    </p>
+    <a href="{{ url_for('github.login') }}"> <button class="logins">Return to GitHub Login</button></a>
     &nbsp;
     <a href="{{ url_for('logout') }}"> <button class="logins">Log out</button></a> <br><br>
     <button><a href="{{ url_for('dataproducer') }}" class="button">Add metadata</a></button>
+    </div>
 
     <h1>Coming soon: data tools</h1>
     <p>Obtain EOV-specific guidance on how to organize data. Tools to convert your data into EOV- and Darwin Core-compliant formats are in development. Note that these tools will not be a replacement for submitting data to OBIS, but will just make the process easier to do so.</p>

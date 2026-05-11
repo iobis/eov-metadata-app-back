@@ -1,3 +1,17 @@
+:root {
+    --bg: #d7ebf8;
+    --text-muted: #5c6b7c;
+    --accent: #0d5c6f;
+    --accent-soft: #e8f2f4;
+    --radius: 10px;
+    --shadow: 0 2px 12px rgba(13, 92, 111, 0.06);
+    --blue--1: #44AFFA;
+    --blue--2: #122E65;
+    --blue--3: #2E539B;
+    --blue--4: #002366;
+    --text--color--1: #171717;
+    --text--color--2: #2E539B;
+  }
 .logo-container {
     display: flex;
     flex-wrap: wrap;
@@ -27,7 +41,7 @@
     }
 }
 nav {
-    background-color: #002366;
+    background-color: var(--blue--4);
     color: white;
     display: flex;
     justify-content: space-between;
@@ -39,6 +53,7 @@ nav {
     z-index: 1000;
     width: 100%;
     margin: 0 auto; 
+    height: 9vh;
 }
 nav .navbar { /* Navbar Title */
     font-size: 1.8rem;
@@ -77,11 +92,11 @@ nav .navbar { /* Navbar Title */
 }
 hr {
     border: 0;
-    border-top: 3px solid #002366; /* Dark blue horizontal rule */
+    border-top: 3px solid var(--blue--4); /* Dark blue horizontal rule */
     margin: 20px 0;
 }
 .footer {
-    background-color: #002366;
+    background-color: var(--blue--4);
     color: white;
     text-align: center;
     position: relative;

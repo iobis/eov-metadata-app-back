@@ -13,17 +13,41 @@
     </ul>
     Please note the distinction between data producer metadata and dataset metadata. Data producers ARE the entities that collect information about and monitor EOVs, while datasets are produced FROM data producers.</p>
     <p>You must have a GitHub account to use this tool as submissions are sent to the GitHub repository.</p>
-    <p>Log in with GitHub to access the application.</p>
-    <a href="{{ url_for('github.login') }}"><button class="logins">Log in to GitHub</button></a>
-    <a href="{{ url_for('logout') }}"><button class="logins">Log out of GitHub</button></a><br><br>
+    <div class="callout">
+        <div class="callout-title">Required Metadata</div>
+        <p><b>The following metadata fields are required for submission:</b></p>
+        <ul>
+            <li>Name of data producer</li>
+            <li>URL of landing page</li>
+            <li>Frequency of updates to metadata</li>
+            <li>Contact name, email (e.g. helpdesk, general support)</li>
+            <li>Name(s) of relevant EOV(s)</li>
+        </ul>
+    </div>
+    <p>Additional metadata fields are optional but encouraged, and include:</p>
+    <ul>
+        <li>Name and identifier of parent organization</li>
+        <li>Description or abstract</li>
+        <li>License, or other relevant policies</li>
+        <li>Funder information</li>
+        <li>Sampling frequency and approach</li>
+        <li>Keywords</li>
+        <li>Geographic and temporal coverage</li>
+        <li>URLs or related outputs</li>
+        
+    </ul>
+    <div class="centrebox">
+        <p><b>Log in with GitHub</b></p>
+        <a href="{{ url_for('github.login') }}"><button class="logins">GitHub Login</button></a>
+        <a href="{{ url_for('logout') }}"><button class="logins">Log out</button></a><br><br>
     If you see your GitHub username below, you may already be logged in and can proceed to the home page.<br>
     {% if user %}
         <p>You are logged in as {{ user.login }}.</p>
     {% else %}
         <i><p>No user logged in.</p></i>
     {% endif %}
-
     
     <a href="{{ url_for('home') }}"><button>Go to Home</button></a>
+    </div>
 
     {% endblock %}

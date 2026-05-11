@@ -8,15 +8,27 @@
     <button class="back-button"><a href="{{ url_for('dataproducer') }}" class="button">Back</a></button>
     <p>Please ensure all previously filled fields are correctly filled in before the form is submitted. This has been automatically completed for you in most cases, but you should review all fields carefully to ensure there are no errors. Fields left blank in a previous submission will be populated with placeholders. Forms can still be saved as drafts and updated for submission later.</p>
     <p><span class="required">*</span> = required</p>
+    <div style="background-color: #f9f9f9; padding: 10px; margin-bottom: 15px; border-radius: 5px;">
+        <strong>Access Control:</strong> You can only view and edit entries that you created. 
+        {% if session.user and session.user.login in admin_users %}
+            <span style="color: green;">👤 (Admin - you can view all entries)</span>
+        {% endif %}
+    </div>
     <form method="POST" action="/update_entry">
         <label for="selected_issue">Select an Issue:</label>
-        <select id="selected_issue" name="selected_issue">
-            <option value="">-- Select an Issue --</option>
-            {% for issue in issues %}
-            <option value="{{ issue.number }}">{{ issue.title }}</option>
-            {% endfor %}
-
-        </select>
+        <input type="text" id="issue-search" placeholder="Search issues..." style="margin-bottom: 10px; width: 100%; padding: 8px; box-sizing: border-box;">
+        <input type="hidden" id="selected_issue_hidden" name="selected_issue" value="">
+        <div id="issues-list" style="width: 100%; max-height: 200px; overflow-y: auto; border: 1px solid #ccc; padding: 5px; box-sizing: border-box;">
+            <ul style="list-style: none; padding: 0; margin: 0;">
+                {% for issue in issues %}
+                <li data-value="{{ issue.number }}" data-owner="{{ issue.user.login if issue.user else 'Unknown' }}" class="{% if issue.get('is_bioeco') %}bioeco{% endif %}" style="padding: 5px; cursor: pointer;" onclick="selectIssue(this)">
+                    {% if issue.get('is_bioeco') %}[BioEco]{% endif %} 
+                    {{ issue.title }}
+                    <span style="color: #666;">(Owner: {{ issue.user.login if issue.user else 'Unknown' }})</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
         <button type="submit">Load Metadata</button>
         
     </form>
@@ -41,5 +53,42 @@
     </div>
     <button id="toTopButton" onclick="scrollToTop()">To Top</button>
     <button id="toBottomButton" onclick="scrollToBottom()">To Bottom</button>
+    
+    <script>
+        // Search functionality for the list
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('issue-search');
+            const issuesList = document.getElementById('issues-list');
+            const listItems = issuesList.querySelectorAll('li');
+
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase().trim();
+                
+                listItems.forEach(item => {
+                    const text = item.textContent.toLowerCase();
+                    if (text.includes(searchTerm)) {
+                        item.style.display = '';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            });
+        });
+
+        function selectIssue(element) {
+            const hiddenInput = document.getElementById('selected_issue_hidden');
+            const value = element.getAttribute('data-value');
+            hiddenInput.value = value;
+
+            // Highlight selected item
+            const listItems = document.querySelectorAll('#issues-list li');
+            listItems.forEach(item => item.classList.remove('selected'));
+            element.classList.add('selected');
+
+            // Submit the form to load the metadata
+            const form = document.querySelector('form');
+            form.submit();
+        }
+    </script>
     
 {% endblock %}

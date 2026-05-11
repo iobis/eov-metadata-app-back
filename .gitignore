@@ -4,3 +4,7 @@ server.key
 .env
 .python-version
 __pycache__
+token_usage.log
+token_usage.log.*
+app.log
+app.log.*

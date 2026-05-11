@@ -54,7 +54,7 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
         form_html += f"""
         <div class="flex-row">
             <div class="form-label">
-                <h4><label for='shortname'>Data Producer Acrynom:<span class="info-circle" data-tooltip="Enter the short name or acrynom of the data producer.">ⓘ</span></label></h4>
+                <h4><label for='shortname'>Data Producer Acronym:<span class="info-circle" data-tooltip="Enter the short name or acronym of the data producer.">ⓘ</span></label></h4>
             </div>
             <div class="flex-col input-col">
                 <input type='text' name='shortname' id='shortname' value="{prefilled_data.get('name', '')}" placeholder="BioEcoOcean">
@@ -80,7 +80,7 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
         form_html += f"""
         <div class="flex-row">
             <div class="form-label">
-                <label for='projid'>Data producer ID:<span class="info-circle" data-tooltip="Provide the ID for the entity producing EOV data, e.g. project, institution, programme, etc. IDs could include a Research Activity Identifier (RAiD), or Research Organization Registry identifier (ROR ID). If you do not currently have one it can be added later. The ID will facilitate connecting the data producer metadata with other outputs e.g. datasets in OBIS">ⓘ</span></label>
+                <label for='projid'>Data Producer ID:<span class="info-circle" data-tooltip="Provide the ID for the entity producing EOV data, e.g. project, institution, programme, etc. IDs could include a Research Activity Identifier (RAiD), or Research Organization Registry identifier (ROR ID). If you do not currently have one it can be added later. The ID will facilitate connecting the data producer metadata with other outputs e.g. datasets in OBIS">ⓘ</span></label>
             </div>
             <div class="flex-col input-col">
                 <input type='text' name='projid' id='projid' value="{prefilled_data.get('identifier', {}).get('url', '')}" placeholder="e.g. a RAiD, or ROR ID">

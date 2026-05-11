@@ -230,6 +230,19 @@ input[type="checkbox"]{
     border: 1px solid #ccc;
     word-wrap:break-word
 }
+/* Ensure table cells have normal text styling (not links) */
+#regions_table td {
+    color: inherit;
+    text-decoration: none;
+}
+/* Only links within the table should be styled as links */
+#regions_table td a {
+    color: rgb(4 81 95);
+    text-decoration: underline;
+}
+#regions_table td a:hover {
+    color: rgb(146, 114, 197);
+}
 #regions_table tr:hover {
     background-color: #f1f1f1;
     cursor: pointer;
