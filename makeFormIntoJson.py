@@ -6,6 +6,26 @@ from processMappings import map_form_to_schema
 with open("schema.json") as f:
     form_schema = json.load(f)
 
+def add_schema_prefix(obj):
+    """
+    Recursively add 'schema:' to plain JSON keys so they compact to schema.org terms.
+    Keys that are already qualified (contain ':', e.g. geosparql:asWKT)
+    are left unchanged so GeoSPARQL and similar terms are not turned into schema:geosparql:asWKT.
+    """
+    if isinstance(obj, dict):
+        new_obj = {}
+        for k, v in obj.items():
+            if k.startswith("@"):
+                new_obj[k] = add_schema_prefix(v)
+            elif ":" in k:
+                new_obj[k] = add_schema_prefix(v)
+            else:
+                new_obj[f"schema:{k}"] = add_schema_prefix(v)
+        return new_obj
+    if isinstance(obj, list):
+        return [add_schema_prefix(item) for item in obj]
+    return obj
+
 def clean_dict(data):
     return {k: v for k, v in data.items() if v}
 
@@ -14,10 +34,10 @@ def makeFormJson():
         ########## Create the schema entry ##########
         schema_entry = {
             "@context": {
-                "@vocab": "https://schema.org/",
+                "schema": "http://schema.org/",
                 "geosparql": "http://www.opengis.net/ont/geosparql#"
             },
-            "@type": "Project",
+            "@type": "schema:ResearchProject",
         }
 
         ########## Collect and sanitize submitted form data ##########
@@ -37,6 +57,9 @@ def makeFormJson():
             "geosparql": "http://www.opengis.net/ont/geosparql#"
         })
         schema_entry.setdefault("@type", "Project")
+
+        # Remove @context from schema_entry for @graph
+        schema_entry.pop("@context", None)
         actions_json = map_form_to_schema(sanitized_data, actions_field_mapping, base_type="Action")
         metadata_frequency = map_form_to_schema(sanitized_data, frequency_field_mapping)
 
@@ -71,7 +94,7 @@ def makeFormJson():
             projid_url = sanitized_data.get("projid", [""])[0]
             value = extract_identifier_value(projid_type, projid_url)
             schema_entry["identifier"] = { #will need to be updated with some logic for if it's a DOI or not
-                "@type": "PropertyValue",
+                "@type": "schema:PropertyValue",
                 "description": sanitized_data.get("projid_type", [""])[0],
                 "propertyID": projid_type_url,
                 "url": projid_url,
@@ -81,7 +104,7 @@ def makeFormJson():
         ## Parent organization
         if sanitized_data.get("parentOrganization", [""])[0]:
             schema_entry["parentOrganization"] = {
-                "@type": "Organization",
+                "@type": "schema:Organization",
                 "legalName": sanitized_data.get("parentOrganization", [""])[0],
                 "url": sanitized_data.get("parentOrganization_url", [""])[0]
                 }
@@ -90,7 +113,7 @@ def makeFormJson():
         license_data = sanitized_data.get("license", [""])[0]
         license_name, license_url = license_data.split("|") if license_data else (license_data, "")
         publishing_principles =[{
-            "@type": "CreativeWork",
+            "@type": "schema:CreativeWork",
             "name": license_name,
             "url": license_url
         }]
@@ -99,7 +122,7 @@ def makeFormJson():
         datapolicy_url = sanitized_data.get("datapolicy_url", [""])[0]
         if datapolicy_name and datapolicy_text and datapolicy_url:
             publishing_principles.append({
-                "@type": "CreativeWork",
+                "@type": "schema:CreativeWork",
                 "name": datapolicy_name,
                 "url": datapolicy_url,
                 "text": datapolicy_text
@@ -120,14 +143,15 @@ def makeFormJson():
         north = sanitized_data.get("north", [""])[0]
         east = sanitized_data.get("east", [""])[0]
         if area_name and area_id:
+            # For named areas, add as areaServed for now, but to align, perhaps integrate
             area_served = {
-                "@type": "Place",
+                "@type": "schema:Place",
                 "name": area_name,
                 "identifier": area_id,
             }
             if south and west and north and east:
                 area_served["geo"] = {
-                        "@type": "GeoShape",
+                        "@type": "schema:GeoShape",
                         "description": "Bounding box polygon with lat long (Y X) coordinate order.",
                         "geosparql:asWKT": {
                             "@type": "http://www.opengis.net/ont/geosparql#wktLiteral",
@@ -164,7 +188,7 @@ def makeFormJson():
                 keywords_list.extend([
                     {
                         "identifier": keyword.get("id"),
-                        "@type": "DefinedTerm",
+                        "@type": "schema:DefinedTerm",
                         "termCode": keyword.get("obo_id"),  # Using identifier as the termCode
                         "name": keyword.get("label"),
                         "url": keyword.get("id")  # Using identifier as the URL
@@ -183,7 +207,7 @@ def makeFormJson():
                     propertyID_list = [pid.strip() for pid in propertyID.split(",") if pid.strip()]
                     if name and propertyID_list:  # Ensure both fields have data
                         keywords_list.append({
-                            "@type": "DefinedTerm",
+                            "@type": "schema:DefinedTerm",
                             "name": name,
                             "url": propertyID_list if len(propertyID_list) > 1 else propertyID_list[0],  # Use list if multiple, string if one
                         })
@@ -202,7 +226,7 @@ def makeFormJson():
         for i in range(max(len(funding_name), len(funding_identifier), len(funder_name), len(funder_url))):
             # Create a single funder entry
             funder = {
-                "@type": "FundingAgency",
+                "@type": "schema:FundingAgency",
                 "name": funder_name[i] if i < len(funder_name) else "",
                 "legalName": funder_name[i] if i < len(funder_name) else "",
                 "url": funder_url[i] if i < len(funder_url) else ""
@@ -210,7 +234,7 @@ def makeFormJson():
             funder = funder if funder["name"] or funder["url"] else None
             # Create a single funding entry with its associated funder
             funding_entry = {
-                "@type": "MonetaryGrant",
+                "@type": "schema:MonetaryGrant",
                 "name": funding_name[i] if i < len(funding_name) else "",
                 "identifier": funding_identifier[i] if i < len(funding_identifier) else "",
                 "funder": funder
@@ -243,7 +267,7 @@ def makeFormJson():
             # Add the contact entry to the 'contactPoint' list
             if any([name, email, type, identifier]):
                 contact_points.append({
-                    "@type": "ContactPoint",
+                    "@type": "schema:ContactPoint",
                     "contactType": type,
                     "name": name,
                     "email": email,
@@ -268,10 +292,10 @@ def makeFormJson():
             schema_entry["makesOffer"] = []
             for offer_name, offer_url in sanitized_outputs:
                 schema_entry["makesOffer"].append({
-                    "@type": "Offer",
+                    "@type": "schema:Offer",
                     "name": f"Distribution of {offer_name}",
                     "itemOffered": {
-                        "@type": "CreativeWork",
+                        "@type": "schema:CreativeWork",
                         "name": offer_name,
                         "url": offer_url
                     }
@@ -329,12 +353,9 @@ def makeFormJson():
 
         ########## Build the separate JSON for Actions ##########
         actions_json = {
-            "@context": {
-                "@vocab": "https://schema.org/"
-            },
-            "@type": "Action",
+            "@type": "schema:Action",
             "agent": {
-                "@type": "Project",
+                "@type": "schema:ResearchProject",
                 "@id": schema_entry["@id"],  # Pointing to the id of the project itself
                 "name": project_name  # Pointing to the id of the project itself and where its json is
             }
@@ -348,7 +369,7 @@ def makeFormJson():
             for platform in sanitized_data['measurement_platforms']:
                 name, propertyID = platform.split("|")
                 actions_json["instrument"].append({
-                    "@type": "Thing",
+                    "@type": "schema:Thing",
                     "name": name,
                     "url": propertyID
                 })
@@ -361,7 +382,7 @@ def makeFormJson():
         num_sops = max(len(sops_url), len(sops_name))
         for i in range(num_sops):
             sop_entry = {
-                "@type": "HowTo",
+                "@type": "schema:HowTo",
                 "url": sops_url[i] if i < len(sops_url) else ""
                 }
             if i < len(sops_name):
@@ -388,7 +409,23 @@ def makeFormJson():
         ########## Create small file for frequency for the sitemap ##########
         metadata_frequency = {}
         if sanitized_data.get("frequency", [""])[0]:
-            metadata_frequency["frequency"] = sanitized_data.get("frequency", ["Never"])[0]
+            metadata_frequency["schema:frequency"] = sanitized_data.get("frequency", ["Never"])[0]
 
+        # Apply schema prefix to Project and Action nodes (qualified names like geosparql:asWKT unchanged)
+        schema_entry = add_schema_prefix(schema_entry)
+        actions_json = add_schema_prefix(actions_json)
 
-        return schema_entry, actions_json, metadata_frequency  # Return the schema_entry object
+        ########## Combine into @graph structure ##########
+        # Create the @graph array
+        graph = [schema_entry, actions_json, metadata_frequency]
+
+        # Create the final output with @graph
+        output = {
+            "@context": {
+                "schema": "http://schema.org/",
+                "geosparql": "http://www.opengis.net/ont/geosparql#"
+            },
+            "@graph": graph
+        }
+
+        return output

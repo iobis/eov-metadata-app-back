@@ -7,7 +7,7 @@ from flask import jsonify, request, session, redirect, url_for
 from helpers import github_request
 
 # Function to handle the action based on the form submission
-def process_submission_action(issue_number, action, output, GITHUB_API_URL, REPO_OWNER, GITHUB_REPO): 
+def process_submission_action(issue_number, action, output, GITHUB_API_URL, REPO_OWNER, GITHUB_REPO, github, session): 
     if action == "print_json":
         # Print JSON for testing
         print(output)
@@ -26,27 +26,18 @@ def process_submission_action(issue_number, action, output, GITHUB_API_URL, REPO
     issue_body = (
         "### Metadata Submission\n"
         "```json\n"
-        f"{json.dumps(schema_entry, indent=2)}\n"
-        "```\n\n"
-        "### Actions JSON\n"
-        "```json\n"
-        f"{json.dumps(actions_json, indent=2)}\n"
-        "```\n\n"
-        "### Metadata Frequency\n"
-        "```json\n"
-        f"{json.dumps(metadata_frequency, indent=2)}\n"
+        f"{json.dumps(output, indent=2)}\n"
         "```\n"
     )
 
     labels = ["draft submission", "metadata submission"] if action == "save_draft" else ["metadata submission"]
 
-    # Create payload for GitHub
+    # Create payload for GitHub with full output
     payload = {
         "title": issue_title,
         "body": issue_body,
         "labels": labels
     }
-    headers = {"Authorization": f"token {GITHUB_TOKEN}"}
     print("Payload:", payload)
     
     # Save a draft to GitHub
@@ -92,38 +83,84 @@ def process_submission_action(issue_number, action, output, GITHUB_API_URL, REPO
             return {"success": True, "message": f"Issue submitted successfully and assigned to {created_by}!", "issue_url": issue_url}
         else:
             return {"success": False, "error": response.json()}, response.status_code
-            #return jsonify({"success": False, "error": response.json()}), response.status_code
 
     # Update issue using GitHub API
     if action == "update_github" and issue_number is not None:
         print("issue_number", issue_number)
-        issue_url = f"https://api.github.com/repos/{REPO_OWNER}/{GITHUB_REPO}/issues/{issue_number}"
-        response = requests.patch(
-            issue_url,
-            json=payload,
-            headers=headers
-        )
-
-        if response.status_code == 200:
-            # Step 2: Add a comment to the issue (POST request)
-            comments_url = f"https://api.github.com/repos/{REPO_OWNER}/{GITHUB_REPO}/issues/{issue_number}/comments"
-            comment_payload = {
-                "body": f"Entry updated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"  # Add a timestamp for the update
+        
+        if issue_number.startswith("bioeco-"):
+            # Handle BioEco update - folder name is in session
+            folder = session.get('bioeco_folder')
+            if not folder:
+                return {"success": False, "error": "BioEco folder information not found in session"}
+            
+            # Get the full graph from output
+            graph = output.get("@graph", [])
+            if not graph:
+                return {"success": False, "error": "Invalid output for BioEco update"}
+            
+            # Update single JSON file with the full graph
+            json_api_url = f"https://api.github.com/repos/BioEcoOcean/metadata-tracking-dev/contents/jsonFiles/{folder}/{folder}.json"
+            resp, redirect_response = github_request(github, session, "get", json_api_url)
+            if redirect_response:
+                return {"success": False, "error": "Authentication required", "reauth_required": True}, 401
+            if resp.status_code != 200:
+                return {"success": False, "error": "Failed to get current BioEco file"}
+            
+            current = resp.json()
+            sha = current.get('sha')
+            if not sha:
+                return {"success": False, "error": "Missing SHA for current BioEco file"}
+            
+            content_data = {"@graph": graph}
+            content = base64.b64encode(json.dumps(content_data, indent=2).encode()).decode()
+            payload = {
+                "message": f"Update BioEco entry {folder}",
+                "content": content,
+                "sha": sha
             }
-            comment_response = requests.post(comments_url, json=comment_payload, headers=headers)
+            resp, redirect_response = github_request(github, session, "put", json_api_url, json=payload)
+            if redirect_response:
+                return {"success": False, "error": "Authentication required", "reauth_required": True}, 401
+            if resp.status_code not in [200, 201]:
+                return {"success": False, "error": resp.json()}
+            
+            return {"success": True, "message": f"BioEco entry {folder} updated successfully!"}
+        else:
+            # Original issue update
+            issue_url = f"https://api.github.com/repos/{REPO_OWNER}/{GITHUB_REPO}/issues/{issue_number}"
+            response, redirect_response = github_request(
+                github, session, "patch",
+                issue_url,
+                json=payload
+            )
+            if redirect_response:
+                return {"success": False, "error": "Authentication required", "reauth_required": True}, 401
 
-            # Check if the comment was added successfully
-            if comment_response.status_code == 201:
-                issue_url = f"https://github.com/{REPO_OWNER}/{GITHUB_REPO}/issues/{issue_number}"
-                return {"success": True, "message": "Issue updated and comment added successfully!", "issue_url": issue_url}
-                #return jsonify({"success": True, "message": "Issue updated and comment added successfully!"})
+            if response.status_code == 200:
+                # Step 2: Add a comment to the issue (POST request)
+                comments_url = f"https://api.github.com/repos/{REPO_OWNER}/{GITHUB_REPO}/issues/{issue_number}/comments"
+                comment_payload = {
+                    "body": f"Entry updated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"  # Add a timestamp for the update
+                }
+                comment_response, redirect_response = github_request(
+                    github, session, "post",
+                    comments_url,
+                    json=comment_payload
+                )
+                if redirect_response:
+                    return {"success": False, "error": "Authentication required", "reauth_required": True}, 401
+
+                # Check if the comment was added successfully
+                if comment_response.status_code == 201:
+                    issue_url = f"https://github.com/{REPO_OWNER}/{GITHUB_REPO}/issues/{issue_number}"
+                    return {"success": True, "message": "Issue updated and comment added successfully!", "issue_url": issue_url}
+                else:
+                    return {"success": False, "error": comment_response.json()}
             else:
-                return {"success": False, "error": comment_response.json()}
-                #return jsonify({"success": False, "error": comment_response.json()}), comment_response.status_code
-
+                return {"success": False, "error": response.json()}, response.status_code
 
     return {"success": False, "error": "Invalid action provided"}
-    #return jsonify({"success": False, "error": "Invalid action provided"}), 400
 
 # handle label assignment using the admin token:
 def fallback_add_labels(issue_number, REPO_OWNER, GITHUB_REPO, label):

@@ -1,0 +1,82 @@
+{% extends "layouts/header.html" %}
+
+{% block title %}Manage BioEco Entry Owners{% endblock %}
+
+{% block content %}
+    <h1>Manage BioEco Entry Ownership</h1>
+    <button class="back-button"><a href="{{ url_for('home') }}" class="button">Back to Home</a></button>
+    
+    <p>Use this page to assign GitHub users as owners of BioEco entries. Owners can view and edit their assigned entries.</p>
+    
+    <div style="margin: 20px 0;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background-color: #f0f0f0;">
+                    <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Entry ID</th>
+                    <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Project Name</th>
+                    <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Current Owner</th>
+                    <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in entries %}
+                <tr style="border: 1px solid #ddd;">
+                    <td style="padding: 10px;">{{ entry.id }}</td>
+                    <td style="padding: 10px;">{{ entry.name }}</td>
+                    <td style="padding: 10px;">
+                        <span id="owner-{{ entry.id }}">
+                            {% if entry.owner %}
+                                <strong>{{ entry.owner }}</strong>
+                            {% else %}
+                                <em style="color: #999;">Unassigned</em>
+                            {% endif %}
+                        </span>
+                    </td>
+                    <td style="padding: 10px;">
+                        <input type="text" id="input-{{ entry.id }}" placeholder="GitHub username" 
+                               value="{{ entry.owner or '' }}" style="padding: 5px; width: 200px;">
+                        <button onclick="assignOwner('{{ entry.id }}')">Update</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <script>
+        function assignOwner(entryId) {
+            const newOwner = document.getElementById('input-' + entryId).value.trim();
+            
+            fetch('{{ url_for("manage_bioeco_owners") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    'entry_id': entryId,
+                    'new_owner': newOwner
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update the display
+                    const ownerDisplay = document.getElementById('owner-' + entryId);
+                    if (newOwner) {
+                        ownerDisplay.innerHTML = '<strong>' + newOwner + '</strong>';
+                    } else {
+                        ownerDisplay.innerHTML = '<em style="color: #999;">Unassigned</em>';
+                    }
+                    alert('Owner updated successfully!');
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error updating owner');
+            });
+        }
+    </script>
+    
+{% endblock %}

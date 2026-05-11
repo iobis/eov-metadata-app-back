@@ -542,7 +542,8 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
         print("Bounding box:", north, south, east, west)
 
         form_html += f"""
-        <a>Draw Bounding Area</a>
+        <a>Draw Bounding Area</a><br>
+        <a>Note: this map is currently only meant for rectangular shapes to capture the broad area of a location. For specific geoemtry strings, please provide a WKT string below.</a>
         <div id="map" style="width: 80vw; max-width: 100%; height: 50vh;"></div>
         <div class="flex-col" style="align-items: center;">
             <div class="flex-row">
@@ -582,7 +583,7 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
             <div class="flex-col input-col">    
                 <input type="text" name="wktstring" id="wktstring" value="{wkt_previous}" placeholder="POLYGON ((-64.8 32.3, -65.5 18.3, -80.3 25.2, -64.8 32.3))">
                 <div class='previous'><strong>Previously entered:</strong> {wkt_previous or 'N/A'}</div>
-                <div>Well-Known Text (WKT) strings are a text format to respresent spatial geometries (e.g. points, lines, polygons). For help generating WKT strings, see <a href="https://wktmap.com/">https://wktmap.com/</a></div>
+                <div>Well-Known Text (WKT) strings are a text format to respresent spatial geometries (e.g. points, lines, polygons). For help generating WKT strings, see <a href="https://wktmap.com/" target='_blank'>https://wktmap.com/</a></div>
             </div>
         </div>
         """

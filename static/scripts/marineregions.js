@@ -18,9 +18,20 @@ function triggerRegionSearch() {
                 data.forEach(region => {
                     const row = document.createElement("tr");
 
+                    // Construct the full URL for MRGID
+                    const mrgidUrl = `http://marineregions.org/mrgid/${region.MRGID}`;
                     // Create the region name cell
                     const regionNameCell = document.createElement("td");
-                    regionNameCell.textContent = region.preferredGazetteerName;
+                    const regionNameLink = document.createElement("a");
+                    regionNameLink.href = mrgidUrl;
+                    regionNameLink.target = "_blank";  // Open in new tab
+                    regionNameLink.textContent = region.preferredGazetteerName;
+                    // Stop the link click from triggering the row click handler
+                    regionNameLink.addEventListener("click", function (e) {
+                        e.stopPropagation();  // Prevent row click from firing
+                        // Let the default link behavior happen (open in new tab)
+                    });
+                    regionNameCell.appendChild(regionNameLink);
                     row.appendChild(regionNameCell);
 
                     // Create the type cell
@@ -41,6 +52,12 @@ function triggerRegionSearch() {
                         document.getElementById("spatial_coverage_name").value = region.preferredGazetteerName;
                         document.getElementById("spatial_coverage_identifier").value = mrgidUrl;
                         table.style.display = "none";  // Hide the table after selection
+                        if (e.target.tagName !== 'A') {
+                            // When the user clicks the row (but not the link), populate the name and identifier
+                            document.getElementById("spatial_coverage_name").value = region.preferredGazetteerName;
+                            document.getElementById("spatial_coverage_identifier").value = mrgidUrl;
+                            table.style.display = "none";  // Hide the table after selection
+                        }
                     });
 
                     tableBody.appendChild(row);

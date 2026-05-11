@@ -10,10 +10,7 @@ import tempfile
 import zipfile
 import json
 import pandas as pd
-import re
-import csv
 import io
-import platform #for running locally
 from flask_caching import Cache
 from datetime import datetime, timedelta
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -56,12 +53,8 @@ from processMappings import map_form_to_schema
 from generateForm import generate_form
 from submitAction import process_submission_action
 from makeFormIntoJson import makeFormJson
-from datetime import datetime
-from helpers import set_flask_environment
-from werkzeug.middleware.proxy_fix import ProxyFix
 from dois import ObisDoi
 from convert_to_dwc import convert_to_dwc as run_dwc_conversion
-from urllib.parse import quote, unquote
 
 # ============================================================================
 # Application Setup
@@ -73,15 +66,6 @@ configure_flask_file_logging(app)
 app.wsgi_app = ProxyFix(
     app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1
 )
-
-# app.secret_key = os.environ.get("SECRET_KEY", "supersekrit")
-# app.config["GITHUB_OAUTH_CLIENT_ID"] = os.environ.get("GITHUB_OAUTH_CLIENT_ID")
-# app.config["GITHUB_OAUTH_CLIENT_SECRET"] = os.environ.get("GITHUB_OAUTH_CLIENT_SECRET")
-# app.config['SESSION_TYPE'] = "redis"
-# app.config['SESSION_REDIS'] = Redis(host='127.0.0.1', port=5000)
-# app.config['SESSION_PERMANENT'] = False
-# app.config['SESSION_USE_SIGNER'] = True
-# Session(app)
 
 cache = Cache(app, config={'CACHE_TYPE': 'simple'})
 
@@ -199,47 +183,79 @@ def home():
     
     return render_template("home.html", user=session.get("user"), admin_users=ADMIN_USERS)
 
-        # Fetch user info from GitHub if not in session
-        resp = github.get("/user")
-        if not resp.ok:
-            return redirect(url_for('index'))
+@app.route("/admin/bioeco-owners", methods=["GET", "POST"])
+def manage_bioeco_owners():
+    """Admin endpoint to manage BioEco entry ownership."""
+    user = get_or_fetch_user(github, session)
+    
+    # Only allow admin users to access this page
+    if not user or not is_admin(user, ADMIN_USERS):
+        return redirect(url_for('index'))
+    
+    if request.method == "GET":
+        # Load current bioeco owner mappings
+        bioeco_owners = {}
+        try:
+            with open("bioeco_creators.json", "r", encoding="utf-8") as f:
+                data = json.load(f)
+                bioeco_owners = data.get("creators", {})
+        except Exception as e:
+            print(f"Error loading bioeco creators: {e}")
         
-        user_info = resp.json()
-        session["user"] = user_info
-        print("User Info Fetched and Saved:", session["user"], flush=True)
+        # Load all programs from program_names.txt
+        bioeco_entries = []
+        try:
+            with open("program_names.txt", "r", encoding="utf-8") as f:
+                programs = [line.strip() for line in f if line.strip()]
+            
+            for i, program_name in enumerate(programs):
+                entry_id = f"bioeco-{i}"
+                bioeco_entries.append({
+                    "id": entry_id,
+                    "index": i,
+                    "name": program_name,
+                    "owner": bioeco_owners.get(entry_id, None)
+                })
+        except Exception as e:
+            print(f"Error loading bioeco entries from program_names.txt: {e}")
+        
+        return render_template("admin/bioeco_owners.html", entries=bioeco_entries)
     
-    # Retrieve the token from the session
-    github_token = session.get("GITHUB_TOKEN")
-    if not github_token:
-        github_token = session.get("github_oauth_token", {}).get("access_token")
-        if github_token:
-            session["GITHUB_TOKEN"] = github_token
-    print("GITHUB_TOKEN from session:", github_token, flush=True)
-    
-    return render_template("home.html", user=session.get("user"))
-
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect(url_for("index"))
-
-def get_github_issues():
-    GITHUB_TOKEN = session.get("github_oauth_token", {}).get("access_token")
-    try:
-        url = f"https://api.github.com/repos/{REPO_OWNER}/{GITHUB_REPO}/issues"
-        headers = {"Authorization": f"token {GITHUB_TOKEN}"}
-        params = {"labels": "metadata submission"}  # Filtering by label
-        print("Calling GitHub API for getting issues...", flush=True)
-        response = requests.get(url, headers=headers, params=params, timeout=10)
-        print("GitHub API responded", flush=True)
-        if response.status_code == 200:
-            return response.json()  # Return the list of issues
-        else:
-                print(f"Failed to fetch issues: {response.status_code}")
-                return []  # Return an empty list in case of failure
-    except Exception as e:
-        print(f"Error fetching issues: {e}")
-        return jsonify({"success": False, "error": str(e)}), 500
+    elif request.method == "POST":
+        # Update bioeco owner
+        entry_id = request.form.get("entry_id")
+        new_owner = request.form.get("new_owner")
+        
+        if not entry_id:
+            return jsonify({"success": False, "error": "Entry ID required"}), 400
+        
+        try:
+            # Load current data
+            bioeco_owners = {}
+            try:
+                with open("bioeco_creators.json", "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    bioeco_owners = data.get("creators", {})
+            except FileNotFoundError:
+                bioeco_owners = {}
+            
+            # Update or remove owner
+            if new_owner and new_owner.strip():
+                bioeco_owners[entry_id] = new_owner.strip()
+            else:
+                bioeco_owners[entry_id] = None
+            
+            # Save updated data
+            with open("bioeco_creators.json", "w", encoding="utf-8") as f:
+                json.dump({
+                    "notes": "This file maps BioEco entry IDs to their creators (GitHub usernames).",
+                    "creators": bioeco_owners
+                }, f, indent=2)
+            
+            return jsonify({"success": True, "message": f"Owner updated for {entry_id}"}), 200
+        except Exception as e:
+            print(f"Error updating bioeco owner: {e}")
+            return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route("/logout")
 def logout():
@@ -257,35 +273,26 @@ def handle_form_submission():
  
 @app.route("/submit", methods=["POST"])
 def handle_submission():
-    # Get the form data (action and schema_entry)
+    # Get the form data (action)
     action = request.form.get("action")
-    schema_entry, actions_json, metadata_frequency = makeFormJson()  #pass the form output to makeFormJson function
+    output = makeFormJson()  # Returns single @graph output
     print("attempting to get issue number")
     print("session issue number: ", session.get('issue_number', 'N/A'))
     
-    GITHUB_TOKEN = session.get("github_oauth_token", {}).get("access_token")
-    print("submission token: ", GITHUB_TOKEN)
-    if not GITHUB_TOKEN:
-        return jsonify({"success": False, "error": "GitHub token not found in session"}), 401
-    # Check if the token has the required scopes
-    required_scopes = ["public_repo"]
-    if not check_github_token_scopes(GITHUB_TOKEN, required_scopes):
-        return jsonify({"success": False, "error": "GitHub token does not have the required scopes"}), 403
-
-    # Call the function to process the action, passing all 3 json objects
+    # Call the function to process the action, passing the output object
+    # github_request wrapper will handle token and 401 errors automatically
     result = process_submission_action(
         session.get('issue_number', None), 
         action, 
-        schema_entry, actions_json, metadata_frequency,
-        GITHUB_API_URL, REPO_OWNER, GITHUB_REPO)
+        output,
+        GITHUB_API_URL, REPO_OWNER, GITHUB_REPO,
+        github, session)
     print("ACTION RESULT: ", result)
     
     # Handle print_json action
     if action == "print_json":
         return render_template("print_json.html", 
-        schema_entry=json.dumps(schema_entry, indent=4),
-        actions_json=json.dumps(actions_json, indent=4),
-        metadata_frequency=json.dumps(metadata_frequency, indent=4))
+        output=json.dumps(output, indent=4))
 
     # Handle save draft action
     if action == "save_draft":
@@ -349,8 +356,15 @@ def update_entry():
         if any(label["name"] in ["metadata submission", "draft submission"] for label in issue.get("labels", []))
     ]
 
+    # Load bioeco entries with access control
+    user = session.get("user")
+    bioeco_entries = load_bioeco_entries_with_access_control(user, ADMIN_USERS)
+
+    # Combine GitHub issues and bioeco entries
+    all_entries = filtered_issues + bioeco_entries
+
     if request.method == "GET":
-        return render_template("update_entry.html", issues=filtered_issues)
+        return render_template("update_entry.html", issues=all_entries, admin_users=ADMIN_USERS)
 
     elif request.method == "POST":
         print(request.get_data())
@@ -360,40 +374,109 @@ def update_entry():
         print("session issue number after setting default value: ", session.get('issue_number', 'N/A'))
         issue_number = request.form.get("selected_issue", 'N/A')
         if issue_number:
-            # Get the GitHub issue data
-            print("issue number: ", issue_number, "type: ", type(issue_number), "request: ", request.method)
-            session['issue_number'] = issue_number
-            print("session issue number after setting it with real value: ", session.get('issue_number', 'N/A'))
-            issue_url = f"https://api.github.com/repos/{REPO_OWNER}/{GITHUB_REPO}/issues/{issue_number}"
-            headers = {"Authorization": f"token {GITHUB_TOKEN}"}
-            #print("Calling GitHub API in update entry route...", flush=True) #debugging
-            response = requests.get(issue_url, headers=headers, timeout=10)
-            #print("GitHub API responded", flush=True)
-            response_data = response.json()  # Debug: Inspect the full response from GitHub
-            print(f"Response Data: {response_data}")
-
-            if response.status_code == 200:
-                # Parse the issue data
-                issue_data = response.json()
-                issue_body = issue_data["body"]
-                json_blocks = extract_json_blocks(issue_body)
-                schema_entry = json_blocks.get("Metadata Submission")
-                actions_json = json_blocks.get("Actions JSON")
-                metadata_frequency = json_blocks.get("Metadata Frequency")
-
-                # Map the GitHub issue data to schema format
-                mapped_schema_entry = map_form_to_schema(schema_entry, schema_field_mapping)
-                mapped_actions_entry = map_form_to_schema(actions_json, actions_field_mapping)
-                mapped_metadata_frequency = map_form_to_schema(metadata_frequency, frequency_field_mapping)
-                form_html = generate_form(prefilled_data=mapped_schema_entry,
-                    actions_data=mapped_actions_entry,
-                    frequency_data=mapped_metadata_frequency)
-
-                return render_template("update_entry.html", issues=filtered_issues, form_html=form_html, issue_number=issue_number)
+            # Check if it's a bioeco entry
+            if issue_number.startswith("bioeco-"):
+                # Handle bioeco entry - find the folder name from the entry
+                try:
+                    # Find the entry in all_entries to get the folder name
+                    bioeco_entry = None
+                    for entry in all_entries:
+                        if entry.get("number") == issue_number and entry.get("is_bioeco"):
+                            bioeco_entry = entry
+                            break
+                    
+                    if not bioeco_entry:
+                        return redirect_to_error("BioEco entry not found")
+                    
+                    folder = bioeco_entry.get("folder")
+                    if not folder:
+                        return redirect_to_error("Invalid BioEco entry", "No folder information")
+                    
+                    # Fetch the BioEco JSON using the API endpoint
+                    # This abstracts away the GitHub URL construction
+                    json_url = f"https://raw.githubusercontent.com/BioEcoOcean/metadata-tracking-dev/main/jsonFiles/{folder}/{folder}.json"
+                    json_resp = requests.get(json_url, timeout=10)
+                    if json_resp.status_code != 200:
+                        return redirect_to_error("Failed to fetch BioEco data", f"Could not load {folder}.json")
+                    
+                    json_data = json_resp.json()
+                    if isinstance(json_data, dict) and "@graph" in json_data:
+                        output_data = json_data
+                    elif isinstance(json_data, list):
+                        output_data = {"@graph": json_data}
+                    else:
+                        output_data = {"@graph": [json_data]}
+                    
+                    # Store folder info in session for later use
+                    session['bioeco_folder'] = folder
+                    session['issue_number'] = issue_number
+                    
+                    # Process like regular entry
+                    project_node, action_node, frequency_node = split_metadata_submission_graph(output_data)
+                    project_node = strip_schema_org_prefixes(project_node) if project_node else {}
+                    action_node = strip_schema_org_prefixes(action_node) if action_node else {}
+                    frequency_node = strip_schema_org_prefixes(frequency_node) if frequency_node else {}
+                    mapped_schema_entry = map_form_to_schema(project_node, schema_field_mapping)
+                    mapped_actions = map_form_to_schema(action_node, actions_field_mapping)
+                    mapped_frequency = map_form_to_schema(frequency_node, frequency_field_mapping)
+                    form_html = generate_form(
+                        prefilled_data=mapped_schema_entry,
+                        actions_data=mapped_actions,
+                        frequency_data=mapped_frequency,
+                    )
+                    
+                    return render_template("update_entry.html", issues=all_entries, form_html=form_html, issue_number=issue_number, admin_users=ADMIN_USERS)
+                except Exception as e:
+                    print(f"Error loading BioEco entry: {e}")
+                    return redirect_to_error("Error loading BioEco entry", str(e))
             else:
-                return jsonify({"success": False, "error": response.json()})
+                # Handle regular GitHub issue
+                print("issue number: ", issue_number, "type: ", type(issue_number), "request: ", request.method)
+                session['issue_number'] = issue_number
+                print("session issue number after setting it with real value: ", session.get('issue_number', 'N/A'))
+                issue_url = f"https://api.github.com/repos/{REPO_OWNER}/{GITHUB_REPO}/issues/{issue_number}"
+                # Use github_request wrapper - handles token and 401 automatically
+                response, redirect_response = github_request(github, session, "get", issue_url, timeout=10)
+                if redirect_response:
+                    return redirect_response
+                
+                response_data = response.json()  # Debug: Inspect the full response from GitHub
+                print(f"Response Data: {response_data}")
+
+                if response.status_code == 200:
+                    # Parse the issue data
+                    issue_data = response.json()
+                    issue_body = issue_data["body"]
+                    json_blocks = extract_json_blocks(issue_body)
+                    
+                    # Single combined JSON-LD: @graph has Project, Action, and frequency nodes
+                    output_json = json_blocks.get("Metadata Submission")
+                    if output_json:
+                        output_data = (
+                            json.loads(output_json)
+                            if isinstance(output_json, str)
+                            else output_json
+                        )
+                        project_node, action_node, frequency_node = split_metadata_submission_graph(output_data)
+                        project_node = strip_schema_org_prefixes(project_node) if project_node else {}
+                        action_node = strip_schema_org_prefixes(action_node) if action_node else {}
+                        frequency_node = strip_schema_org_prefixes(frequency_node) if frequency_node else {}
+                        mapped_schema_entry = map_form_to_schema(project_node, schema_field_mapping)
+                        mapped_actions = map_form_to_schema(action_node, actions_field_mapping)
+                        mapped_frequency = map_form_to_schema(frequency_node, frequency_field_mapping)
+                        form_html = generate_form(
+                            prefilled_data=mapped_schema_entry,
+                            actions_data=mapped_actions,
+                            frequency_data=mapped_frequency,
+                        )
+                    else:
+                        schema_entry = json_blocks.get("Metadata Submission")
+                        mapped_schema_entry = map_form_to_schema(schema_entry, schema_field_mapping) if schema_entry else {}
+                        form_html = generate_form(prefilled_data=mapped_schema_entry)
+
+                    return render_template("update_entry.html", issues=all_entries, form_html=form_html, issue_number=issue_number, admin_users=ADMIN_USERS)
         else:
-            return jsonify({"success": False, "error": "No issue selected."})
+            return redirect_to_error("No issue selected", "Please select an issue to update.")
 
 @app.route("/remove_entry", methods=["GET", "POST"])
 def remove_entry():
@@ -515,7 +598,6 @@ def process_file():
                 }
 
         elif url:
-            import io, requests
             r = requests.get(url)
             r.raise_for_status()
             content = io.BytesIO(r.content)
@@ -627,25 +709,40 @@ def eov_page(eov):
 
 
 ####### Helper functions ########
-def fetch_projects_from_github():
-    """Fetch the list of projects from the csv in the GitHub repository"""
-    csv_url = "https://raw.githubusercontent.com/BioEcoOcean/metadata-tracking-dev/refs/heads/main/data/bioeco_list.csv"
-    projects = []
-    try:
-        response = requests.get(csv_url, timeout=10)
-        response.raise_for_status()
-        decoded_content = response.content.decode('utf-8')
-        reader = csv.DictReader(decoded_content.splitlines())
+
+@app.route("/api/bioeco/<folder_name>")
+def fetch_bioeco_json(folder_name):
+    """
+    API endpoint to fetch a single BioEco JSON file.
+    Called when a user selects a program from the dropdown.
+    
+    Args:
+        folder_name: The folder name/program name to fetch
         
-        for row in reader:
-            # Expecting columns: 'name', 'project_link'
-            projects.append({
-                "name": row.get("Project Name", "Unnamed"),
-                "project_link": row.get("URL", "")
-            })
-        # Sort projects alphabetically by name (case-insensitive)
-        projects.sort(key=lambda x: x["name"].lower())
-        return projects
+    Returns:
+        JSON response with the fetched data or error
+    """
+    try:
+        # Fetch the JSON file from GitHub
+        json_url = f"https://raw.githubusercontent.com/BioEcoOcean/metadata-tracking-dev/main/jsonFiles/{folder_name}/{folder_name}.json"
+        resp = requests.get(json_url, timeout=10)
+        
+        if resp.status_code != 200:
+            return jsonify({"success": False, "error": f"Failed to fetch {folder_name}.json"}), 404
+        
+        json_data = resp.json()
+        
+        # Normalize the data structure (handle both wrapped and unwrapped)
+        if isinstance(json_data, dict) and "@graph" in json_data:
+            output_data = json_data
+        elif isinstance(json_data, list):
+            output_data = {"@graph": json_data}
+        else:
+            output_data = {"@graph": [json_data]}
+        
+        return jsonify({"success": True, "data": output_data, "folder": folder_name})
+    except requests.Timeout:
+        return jsonify({"success": False, "error": "Request timeout while fetching BioEco data"}), 408
     except Exception as e:
         print(f"Error fetching BioEco JSON for {folder_name}: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
