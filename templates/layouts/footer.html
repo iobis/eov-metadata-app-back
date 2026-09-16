@@ -1,22 +1,21 @@
 <footer class="footer">
     <div class="footer-flex">
         <div class="footer-col">
-            <img src="{{ url_for('static', filename='images/bioecoocean_logo.png') }}" alt="BioEcoOcean Logo" height="50px" style="filter: brightness(100)">
-            <br>
-            <img src="{{ url_for('static', filename='images/OBIS_logo.png') }}" alt="OBIS Logo" height="50px" style="filter: brightness(100)">
-        </div>
-        <div class="footer-col">
-            <p><b>Disclaimer:</b> AI (ChatGPT-4 and -5) was used to assist with the development of this application. All code generated was reviewed, tested, and edited as necessary before being implemented.</p>
-        </div>
-        <div class="footer-col">
-            <p>
-                <img src="{{ url_for('static', filename='images/GitHub_Logo-white.png') }}" alt="GitHub Logo" height="20px">
-                <a href="https://github.com/BioEcoOcean/metadata-app">GitHub development</a>.<br>
-                Submit feedback <a href="https://github.com/BioEcoOcean/metadata-tracking-dev/issues">here</a>.
-            </p>
+            <img src="{{ url_for('static', filename='images/bioecoocean_logo.png') }}" alt="BioEcoOcean Logo" height="50px" style="filter: brightness(100); padding: 10px;">
         </div>
         <div class="footer-col">
             <p>Funded by the European Union under the Horizon Europe Programme, Grant Agreement No. 101136748 (BioEcoOcean). Views and opinions expressed are however those of the author(s) only and do not necessarily reflect those of the European Union or the European Research Executive Agency (REA). Neither the European Union nor the granting authority can be held responsible for them.</p>
         </div>
+        <div class="footer-col">
+            <p>
+                <img src="{{ url_for('static', filename='images/GitHub_Logo-white.png') }}" alt="GitHub Logo" height="20px">
+                <a href="https://github.com/iobis/eov-metadata-app-back" target="_blank">GitHub development</a>.<br>
+                Submit feedback <a href="https://github.com/iobis/eov-metadata-app-front-entries/issues" target="_blank">here</a>.
+            </p>
+        </div>
+        <div class="footer-col">
+            <p><b>Disclaimer:</b> AI (ChatGPT-4 and -5) was used to assist with the development of this application. All code generated was reviewed, tested, and edited as necessary before being implemented.</p>
+        </div>
+        
     </div>
 </footer>

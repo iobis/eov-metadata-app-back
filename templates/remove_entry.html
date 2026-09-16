@@ -12,15 +12,26 @@
     <div class="alert alert-danger">{{ error }}</div>
 {% endif %}
 
-{% if issues %}
+{% if entries %}
     <form method="post">
         <h2>Select an entry:</h2>
-        <ul>
-        {% for issue in issues %}
+        <ul class="entry-list">
+        {% for entry in entries %}
             <li>
-                <label>
-                    <input type="radio" name="selected_issue" value="{{ issue.number }}">
-                    {{ issue.title }} (#{{ issue.number }}) <a href="{{ issue.url }}" target="_blank">here</a>
+                <label class="entry-label">
+                    <input type="radio" name="selected_issue" value="{{ entry.number }}">
+                    <span class="entry-info">
+                        {% if entry.is_bioeco %}
+                            {{ entry.title }} (BioEco entry {{ entry.number }})
+                        {% else %}
+                            {{ entry.title }} (#{{ entry.number }})
+                        {% endif %}
+                    </span>
+                    {% if entry.is_bioeco and entry.folder %}
+                        <a href="https://github.com/{{ repo_owner }}/{{ github_repo }}/blob/main/{{ json_folder }}/{{ entry.folder }}/{{ entry.folder }}.json" target="_blank">here</a>
+                    {% elif entry.html_url or entry.url %}
+                        <a href="{{ entry.html_url or entry.url }}" target="_blank">here</a>
+                    {% endif %}
                 </label>
             </li>
         {% endfor %}

@@ -8,12 +8,12 @@
     <p>Fill the form below, ensuring required fields are populated, and then submit. Examples are provided in placeholders. Forms can also be saved as drafts and updated for submission later using the "Update entry" button on the previous page. The "Print JSON" button will display the current form data in JSON-LD format.</p>
     <button class="back-button"><a href="{{ url_for('dataproducer') }}" class="button">Back</a></button><br>
     <p><span class="required">*</span> = required</p>
-    <form method="POST" action="/submit" onsubmit="return validateForm();">
+    <form method="POST" action="/submit" onsubmit="return validateForm(event);">
         {{ form_html|safe }}
         
-        <button type="submit" class="submit-button-draft" name="action" value="save_draft" id="save-draft-btn">Save Draft</button>
+        <button type="submit" class="submit-button-draft" name="action" value="save_draft" id="save-draft-btn" formnovalidate>Save Draft</button>
         <button type='submit' class="submit-button" name='action' value='submit_to_github' id="submit_to_github">Submit Entry</button>
-        <button type='submit' class="submit-button" name='action' value='print_json' id="print-json-btn">Print JSON</button>
+        <button type='submit' class="submit-button" name='action' value='print_json' id="print-json-btn" formnovalidate>Print JSON</button>
         
     </form>
     <script src="/static/scripts/boundingmap.js"></script>

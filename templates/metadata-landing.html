@@ -5,16 +5,18 @@
 {% block content %}
 
 <h1>EOV Data Producer Metadata</h1>
-    <p>This form allows you to provide metadata describing your Essential Ocean Variables (EOV) <b>"data producer"</b>, which could include monitoring programmes, projects, institutions, etc. Submitting an entry via this application will allow it become visible in both the <a href="https://bioeco.goosocean.org/" target="_blank"><b>GOOS BioEco Portal</b></a> and the <b>Ocean Data and Information System (ODIS) / <a href="https://oceaninfohub.org/" target="_blank">Ocean Info Hub</b></a>. Note that as of August 2025 these connections are still a work in progress, as the BioEco Portal is being redesigned. You may still submit entries via this tool.</p>
+    <p>This form allows you to provide metadata describing your Essential Ocean Variables (EOV) <b>"data producer"</b>. Submitting an entry via this application will allow it become visible in both the <a href="https://bioeco.goosocean.org/" target="_blank"><b>GOOS BioEco Portal</b></a> and the <b>Ocean Data and Information System (ODIS)</b></a>.</p>
     <div class="callout">
-        <div class="callout-title">Info</div>
-        A <b>data producer</b> is any entity that produces data, such as a monitoring programme, project, institution, etc. The GOOS BioEco Portal is a portal for data producers to showcase their data and metadata.
+        <div class="callout-title collapsible-header" role="button" tabindex="0" aria-expanded="true">
+            <span>What is a data producer?</span>
+            <span class="callout-toggle collapsible-toggle">▼</span>
+        </div>
+        <div class="callout-body">
+            A <b>data producer</b> is any entity that produces data, such as a monitoring programme, project, institution, etc. The GOOS BioEco Portal is a portal for data producers to showcase their data and metadata.
+        </div>
     </div>
     <p><b>All information submitted via this form will become public.</b></p>
-    <p>Click the <b>"New entry"</b> button to create a new submission. Please do your best to provide as much information as possible. Required fields are marked with an asterisk *.</p>
-    <p>Once submitted, your form entry will be converted into a JSON-LD format and submitted as a GitHub issue to the BioEcoOcean GitHub repository. You can preview the output by clicking the "Print JSON" button on the form page. To update an existing or draft entry, click the <b>"Update an entry"</b> button. When entries are updated, a date is added in a comment.</p>
-    <p>You must have a GitHub account to use this tool as submissions are sent to the GitHub repository.
-    </p>
+    <p>You must have a GitHub account to use this tool as submissions are sent to the GitHub repository.</p>
     <!-- <p>Confirm your visibility in ODIS by clicking here and searching for your data producer.</p> -->
         
     <h2>Submit data producer metadata:</h2>
@@ -22,50 +24,53 @@
         <li><b>You do NOT need to submit an entry if it is already visible in Ocean Expert, the GOOS BioEco Portal, ODIS, or the Ocean Info Hub.</b> But please ensure those entries are up to date.</li>
         <li>This tool is <b>NOT meant to describe metadata for individual datasets.</b> Metadata describing datasets should accompany the dataset when submitted to OBIS. See <a href="{{ url_for('data') }}" target="_blank">Data Tools</a> for more details.</li>
     </ul>
-    </p>
-            <div class="callout">
-        <div class="callout-title">Required Metadata</div>
-        <p><b>The following metadata fields are required for submission:</b></p>
-        <ul>
-            <li>Name of data producer</li>
-            <li>URL of landing page</li>
-            <li>Frequency of updates to metadata</li>
-            <li>Contact name, email (e.g. helpdesk, general support)</li>
-            <li>Name(s) of relevant EOV(s)</li>
-        </ul>
+    Click the <b>"New entry"</b> button to create a new submission. Please do your best to provide as much information as possible. Required fields are marked with an asterisk (*). To update an existing or draft entry, click <b>"Update an entry"</b>. When entries are updated, a date is added in a comment. <b>If you are updating a a previously submitted BioEco Portal entry and do not see it available, please reach out to us so we can give you edit access.</b></p>
+    
+    <div class="centrebox">
+        <button><a href="{{ url_for('handle_form_submission') }}" class="button">New entry</a></button>
+        <button><a href="{{ url_for('update_entry') }}" class="button">Update an entry</a></button>
+        <button style="background-color: darkred;"><a href="{{ url_for('remove_entry') }}" class="button">Remove an Entry</a></button>
+    </div>
+    <br>
+    
+    <div class="callout">
+        <div class="callout-title collapsible-header" role="button" tabindex="0" aria-expanded="true">
+            <span>Required Metadata</span>
+            <span class="callout-toggle collapsible-toggle">▼</span>
+        </div>
+        <div class="callout-body">
+            <p><b>The following metadata fields are required for submission:</b></p>
+            <ul>
+                <li>Name of data producer</li>
+                <li>URL of landing page</li>
+                <li>Frequency of updates to metadata</li>
+                <li>Contact name, email (e.g. helpdesk, general support)</li>
+                <li>Name(s) of relevant EOV(s)</li>
+            </ul>
+        </div>
     </div>
 
-    <button><a href="{{ url_for('handle_form_submission') }}" class="button">New entry</a></button>
-    <button><a href="{{ url_for('update_entry') }}" class="button">Update an entry</a></button>
-    <br><br>
-    <button style="background-color: darkred;"><a href="{{ url_for('remove_entry') }}" class="button">Remove an Entry</a></button>
+    
+    <p>Once submitted, your form entry will be converted into a JSON-LD format and submitted as a GitHub issue to the app's <a href="https://github.com/iobis/eov-metadata-app-front-entries/issues" target="_blank">associated GitHub repository</a>. You can preview the output by clicking the "Print JSON" button on the form page. </p>
+    
 
     <h2>Technical Details</h2>
-    <p>As mentioned above, all submissions are stored in a GitHub repository as issues. Each submission is converted into JSON-LD format before being submitted as an issue. JSON-LD is a standard format for linked data. Three JSON files are created: one main one describing the data producer, one called "Action" to describe the sampling information (e.g. platform, frequency), and one small one to record the frequency of metadata update. Github actions are used to automate the processing of these submissions. Each entry is then stored in a specific folder within the jsonFiles directory. A single sitemap is generated that contains all the entries in the jsonFiles directory. The sitemap file is connected to ODIS and the Ocean Info Hub through the ODIS Catalgoue of Sources. The GOOS BioEco Portal will be directly connected with the output from this application. See the diagram below for a visual representation of the workflow.</p>
+    <p>When you submit the form, your metadata entry is saved as a GitHub issue in the app's repository. The submission is converted into JSON-LD, which is a machine readable format for linked metadata. From each form we generate one JSON-LD file as a graph with three nodes: </p>
+    <ul>
+        <li>a Project node that captures general metadata about the data producer, including contact information, EOV details, etc.</li>
+        <li>an Action node to capture sampling detail information, e.g. sampling approach/platform and frequency,</li>
+        <li>a node that only records the frequency of metadata updates, which is used when creating a sitemap downstream</li>
+    </ul>
+    <p>Once your file is submitted, an automatic GitHub Actions workflow then processes the issue to copy it into a folder with a sanitized version of the producer's name in the <a href="https://github.com/iobis/eov-metadata-app-back/tree/main/jsonFiles" target="_blank">jsonFiles</a> directory. After this, another automatic GitHub Actions workflow builds a single sitemap that lists all published entries based on the folders within jsonFiles. The files and the sitemap are shared directly with the GOOS BioEco Portal, and with ODIS through the ODIS Catalogue of Sources. See the diagram below for a simple visual representation of the workflow.</p>
+    <p>The workflow to update entries imported from the previous GeoNode version of the BioEco Portal is slightly different. Each entry has already been imported into the jsonFiles directory, and requires us to give edit permissions to specific GitHub users so the entries will appear in the Update Entry page.</p>
     <img src="{{ url_for('static', filename='images/app_diagram.svg') }}" alt="Metadata App workflow" style="width: 50%; display: block; margin: auto;">
-    <p>App development can be found <a href="https://github.com/BioEcoOcean/metadata-app" target="_blank">here</a>.</p>
+    <p>App development can be found <a href="https://github.com/iobis/eov-metadata-app-back" target="_blank">here</a>.</p>
     <p>For more information on the JSON-LD format, see the guidelines produced by ODIS <a href="https://book.odis.org/index.html" target="_blank">here</a>.</p>
 
     <h2>Data Producers Already Submitted</h2>
-    <p>Below is a list of data producers that have already been submitted through this application.</p>
-    <table class="projects">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Link</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for project in projects %}
-            <tr>
-                <td>{{ project.name }}</td>
-                <td><a href="{{ project.project_link }}" target="_blank">{{ project.project_link }}</a></td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <p>See the <a href="https://bioeco.goosocean.org/" target="_blank">GOOS BioEco Portal</a> for a list of submitted data producers.</p>
     </div>
 
-
+<script src="/static/scripts/collapsible.js"></script>
 
 {% endblock %}

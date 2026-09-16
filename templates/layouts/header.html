@@ -3,43 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EOV Metadata Submissions</title>
+    <title>{% block title %}EOV Metadata Submissions{% endblock %}</title>
     <link rel="icon" href="{{ url_for('static', filename='images/favicon.ico') }}" type="image/x-icon">
     <!-- <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script> -->
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='header_css.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='data_css.css') }}">  <!-- This is only for the data page, may need to move this -->
-    <title>{% block title %}Default Title{% endblock %}</title>    
 </head>
 <body>
     <header>
         <!-- This is the common header content -->
-        <div class="logo-container">
-            <img src="{{ url_for('static', filename='images/iode-unesco.png') }}" alt="UNESCO-IOC Logo" height="80px">
-            <img src="{{ url_for('static', filename='images/OBIS_logo.png') }}" alt="OBIS Logo" height="80px">
-            <img src="{{ url_for('static', filename='images/bioecoocean_logo.png') }}" alt="BioEcoOcean Logo" height="80px">
-            <img src="{{ url_for('static', filename='images/GOOS-BioEco-logo-update.png') }}" alt="GOOS-BioEco Logo" height="80px">
-        </div>
-        <nav>
-            <div class="navbar">EOV Data Management Tools</div>
-                <div class="hamburger" onclick="toggleMenu()">
+        <div class="topbar">
+            <div class="hamburger" onclick="toggleMenu()">
                 <div></div>
                 <div></div>
                 <div></div>
             </div>
-            <div class="navbar-menu">
+            <a href="{{ url_for('home') }}" class="logo-container">
+                <img src="{{ url_for('static', filename='images/ioc_logo_black.svg') }}" alt="UNESCO-IOC Logo" height="60px">
+                <img src="{{ url_for('static', filename='images/logo_simple.png') }}" alt="OBIS Logo" height="60px">
+                <img src="{{ url_for('static', filename='images/bioecoocean_logo.png') }}" alt="BioEcoOcean Logo" height="50px">
+                <img src="{{ url_for('static', filename='images/GOOS-BioEco-logo-update.png') }}" alt="GOOS-BioEco Logo" height="50px">
+            </a>
+
+            <nav class="navbar-menu">
                 <ul>
                     <li><a href="{{ url_for('home') }}">Home</a></li>
-                    <li><a href="{{ url_for('dataproducer') }}">Metadata</a></li>
+                    <li class="dropdown">
+                        <a href="{{ url_for('dataproducer') }}">Metadata</a>
+                        <ul class="dropdown-menu">
+                            <li><a href="{{ url_for('handle_form_submission') }}">New Entry</a></li>
+                            <li><a href="{{ url_for('update_entry') }}">Update Entry</a></li>
+                            <li><a href="{{ url_for('remove_entry') }}">Remove Entry</a></li>
+                        </ul>
+                    </li>
                     <li><a href="{{ url_for('data') }}">Data tools</a></li>
                     <li><a href="{{ url_for('about') }}">About</a></li>
                 </ul>
-            </div>
-          </nav>
-          <script>
+            </nav>
+        </div>
+
+        <div class="page-title-bar">
+            {% block page_title %}EOV Data Management Tools{% endblock %}
+        </div>
+
+        <script>
             function toggleMenu() {
                 const navMenu = document.querySelector(".navbar-menu");
-                navMenu.classList.toggle("show");
+                const hamburger = document.querySelector(".hamburger");
+                const isOpen = navMenu.classList.toggle("show");
+                hamburger.setAttribute("aria-expanded", isOpen);
             }
         </script>
     </header>
