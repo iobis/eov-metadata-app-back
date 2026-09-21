@@ -10,8 +10,8 @@ load_dotenv()
 # ============================================================================
 # GitHub Configuration
 # ============================================================================
-REPO_OWNER = "BioEcoOcean"
-GITHUB_REPO = "metadata-tracking-dev"
+REPO_OWNER = "iobis"
+GITHUB_REPO = "eov-metadata-app-front-entries"
 BRANCH = "refs/heads/main"
 JSON_FOLDER = "jsonFiles"
 GITHUB_API_URL = f"https://api.github.com/repos/{REPO_OWNER}/{GITHUB_REPO}/issues"
