@@ -12,10 +12,10 @@
     --text--color--2: #2E539B;
   }
 .content{
-    max-width: 80%;
+    max-width: 60%;
     margin: 0 auto;
     padding: 3%;
-    background: #f2f6ff;
+    background: #ffffff;
 }
 body {
     font-family: Arial, sans-serif;
