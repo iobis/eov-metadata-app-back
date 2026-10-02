@@ -8,42 +8,23 @@
 
     Welcome! This application has two main functions: 
     <ul>
-        <li>1) facilitate metadata submission to the <a href="https://bioeco.goosocean.org/" target="_blank">GOOS BioEco Portal</a> and Ocean Data Information System (ODIS) for <b>EOV data producers</b>,</li>
-        <li>2) provide tools for managing <b>EOV datasets</b> and converting them into Darwin Core, to be submitted to <a href="https://obis.org/" target="_blank">OBIS</a> (Work in progress)</li>
+        <li>1) <b>submit metadata</b> describing EOV monitoring efforts to the <a href="https://bioeco.goosocean.org/" target="_blank">GOOS BioEco Portal</a>.</li>
+        <li>2) provide tools for managing <b>EOV datasets</b> and converting them into Darwin Core, to be submitted to <a href="https://obis.org/" target="_blank">OBIS</a> (work in progress)</li>
     </ul>
     Please note the distinction between data producer metadata and dataset metadata. Data producers ARE the entities that collect information about and monitor EOVs, while datasets are produced FROM data producers. For more information about EOV data management, see the <a href="https://iobis.github.io/eov-data-management/">EOV Data Management Guidelines</a>, which are associated with the GOOS BioEco EOV Specification Sheets.
 
     <h1>Submit EOV Metadata</h1>
-    <p>Fill in the form to provide metadata describing any organized monitoring effort for Essential Ocean Variables (EOV). We call these monitoring efforts "data producers", which can include monitoring programmes, projects, institutions, etc. Submitting an entry via this application will allow it become visible in both the <a href="https://bioeco.goosocean.org/" target="_blank">GOOS BioEco Portal</a> and the Ocean Data and Information System (ODIS) / <a href="https://oceaninfohub.org/" target="_blank">Ocean Info Hub</a>. Note that as of August 2025 the connection with these is still a work in progress, as the BioEco Portal is being redesigned. You may still submit entries via this tool.</p>
-
     <p><img src="{{ url_for('static', filename='images/GitHub_Logo.png') }}" alt="GitHub Logo" height="40px"> You must have a GitHub account to use this tool as submissions are sent to the GitHub repository. Your Github account is displayed below if you are properly logged in. Click the <b>"Add metadata"</b> button below to begin submitting metadata.</p>
     <div class="centrebox">
     <h4>Welcome, {{ user["login"] }}, you are logged in. 
-    {% if user["login"] in admin_users %}
-        <span style="color: green; font-weight: bold">👤 (Administrator)</span>
-    {% else %}
-        <span style="color: blue;">(Regular User)</span>
-    {% endif %}
-    </h4>
-    <p style="font-size: 0.9em; color: #666;">
-        {% if user["login"] in admin_users %}
-            <strong>As an administrator:</strong> You can view and edit all metadata entries in the system.
-        {% else %}
-            <strong>As a user:</strong> You can only view and edit your own metadata entries.
-        {% endif %}
-    </p>
-    <a href="{{ url_for('github.login') }}"> <button class="logins">Return to GitHub Login</button></a>
-    &nbsp;
-    <a href="{{ url_for('logout') }}"> <button class="logins">Log out</button></a> <br><br>
+    <br>
     <button><a href="{{ url_for('dataproducer') }}" class="button">Add metadata</a></button>
     </div>
 
-    <h1>Coming soon: data tools</h1>
-    <p>Obtain EOV-specific guidance on how to organize data. Tools to convert your data into EOV- and Darwin Core-compliant formats are in development. Note that these tools will not be a replacement for submitting data to OBIS, but will just make the process easier to do so.</p>
-    <button><a href="{{ url_for('data') }}" class="button">Data Tools</a></button>
-    <br>
+    <h1>Coming soon: Data Tools</h1>
+    <p>Obtain EOV-specific guidance on how to organize biodiversity data. <a href="{{ url_for('data') }}">Data Tools</a> to convert your data into EOV- and Darwin Core-compliant formats are in development. Note that these tools will not be a replacement for submitting data to OBIS, but will just make the process easier to do so.</p>
+
     <h1>Feedback & Development</h1>
-    <button class="back-button"><a href="https://github.com/iobis/eov-metadata-app-front-entries/issues/new" class="button">GitHub: Submit an Issue or Feedback</a></button> 
-    <button class="back-button"><a href="https://github.com/iobis/eov-metadata-app-back" class="button">GitHub Repo for app development</a></button>
+    <button class="back-button"><a href="https://github.com/iobis/eov-metadata-app-front-entries/issues/new" class="button">Submit an Issue or Feedback</a></button>
 
 {% endblock %}

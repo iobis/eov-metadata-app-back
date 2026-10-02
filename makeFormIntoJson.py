@@ -2,6 +2,7 @@ from flask import request
 import json
 from mappings import schema_field_mapping, actions_field_mapping, frequency_field_mapping
 from processMappings import map_form_to_schema
+from config_constants import REPO_OWNER, GITHUB_REPO, JSON_FOLDER
 
 with open("schema.json") as f:
     form_schema = json.load(f)
@@ -361,7 +362,7 @@ def makeFormJson():
             }
         }
         ## Build the @id
-        actions_json["@id"] = f"https://raw.githubusercontent.com/BioEcoOcean/metadata-tracking-dev/refs/heads/main/jsonFiles/{project_name_sanitized}/{project_name_sanitized}_actions.json"
+        actions_json["@id"] = f"https://raw.githubusercontent.com/{REPO_OWNER}/{GITHUB_REPO}/refs/heads/main/jsonFiles/{project_name_sanitized}/{project_name_sanitized}.json"
 
         ## Add platforms to instrument
         actions_json["instrument"] = []

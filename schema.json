@@ -143,52 +143,51 @@
                         "phyto": {
                             "name": "Phytoplankton biomass and diversity",
                             "id": "phyto",
-                            "propertyID": "https://goosocean.org/document/17507"},
+                            "propertyID": ["http://vocab.nerc.ac.uk/collection/EXV/current/EXV056/","https://goosocean.org/document/17507"]},
                         "zoo": {
                             "name": "Zooplankton biomass and diversity",
                             "id": "zoo",
-                            "propertyID": ["https://vocab.nerc.ac.uk/collection/EXV/current/EXV057/",
-                            "https://goosocean.org/document/17509"]},
+                            "propertyID": ["http://vocab.nerc.ac.uk/collection/EXV/current/EXV057/","https://goosocean.org/document/17509"]},
                         "fish": {
                             "name": "Fish abundance and distribution",
                             "id": "fish",
-                            "propertyID": ["https://goosocean.org/document/17510"]},
+                            "propertyID": ["http://vocab.nerc.ac.uk/collection/EXV/current/EXV059/","https://goosocean.org/document/17510"]},
                         "turtle": {
                             "name": "Sea turtles abundance and distribution",
                             "id": "turtle",
-                            "propertyID": "https://goosocean.org/document/36268"},
+                            "propertyID": ["http://vocab.nerc.ac.uk/collection/EXV/current/EXV060/","https://goosocean.org/document/36268"]},
                         "bird": {
                             "name": "Seabirds abundance and distribution",
                             "id": "bird",
-                            "propertyID": "https://goosocean.org/document/36267"},
+                            "propertyID": ["http://vocab.nerc.ac.uk/collection/EXV/current/EXV061/","https://goosocean.org/document/36267"]},
                         "mammal": {
                             "name": "Marine mammal abundance and distribution",
                             "id": "mammal",
-                            "propertyID": "https://goosocean.org/document/36266"},
+                            "propertyID": ["http://vocab.nerc.ac.uk/collection/EXV/current/EXV062/","https://goosocean.org/document/36266"]},
                         "coral": {
                             "name": "Coral cover and composition",
                             "id": "coral",
-                            "propertyID": "https://goosocean.org/document/17512"},
+                            "propertyID": ["http://vocab.nerc.ac.uk/collection/EXV/current/EXV063/","https://goosocean.org/document/17512"]},
                         "seagrass": {
                             "name": "Seagrass cover and composition",
                             "id": "seagrass",
-                            "propertyID": "https://goosocean.org/document/17513"},
+                            "propertyID": ["http://vocab.nerc.ac.uk/collection/EXV/current/EXV064/","https://goosocean.org/document/17513"]},
                         "macroalgae": {
                             "name": "Macroalgal canopy cover and composition",
                             "id": "macroalgae",
-                            "propertyID": "https://goosocean.org/document/17515"},
+                            "propertyID": ["http://vocab.nerc.ac.uk/collection/EXV/current/EXV065/","https://goosocean.org/document/17515"]},
                         "mangrove": {
                             "name": "Mangrove cover and composition",
                             "id": "mangrove",
-                            "propertyID": "https://goosocean.org/document/17514"},
+                            "propertyID": ["http://vocab.nerc.ac.uk/collection/EXV/current/EXV066/","https://goosocean.org/document/17514"]},
                         "microbe": {
                             "name": "Microbe biomass and diversity",
                             "id": "microbe",
-                            "propertyID": "https://goosocean.org/document/36264"},
+                            "propertyID": ["http://vocab.nerc.ac.uk/collection/EXV/current/EXV067/","https://goosocean.org/document/36264"]},
                         "invert": {
                             "name": "Benthic invertebrate abundance and distribution",
                             "id": "invert",
-                            "propertyID": "https://goosocean.org/document/36269"}
+                            "propertyID": ["http://vocab.nerc.ac.uk/collection/EXV/current/EXV068/","https://goosocean.org/document/36269"]}
                     }
                 },
                 "other_eovs": {

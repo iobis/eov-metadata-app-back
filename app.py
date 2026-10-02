@@ -35,7 +35,8 @@ from helpers import (
     is_admin,
     can_view_entry,
     extract_issue_owner,
-    load_bioeco_entries_with_access_control
+    load_bioeco_entries_with_access_control,
+    remove_bioeco_program_entry
 )
 from config_constants import (
     REPO_OWNER,
@@ -145,6 +146,12 @@ def data():
 def about():
     return render_template("about.html")
 
+@app.route("/account")
+def account():
+    """User account page: GitHub login status, role, and login/logout actions."""
+    user = get_or_fetch_user(github, session) if github.authorized else None
+    return render_template("account.html", user=user, admin_users=ADMIN_USERS)
+
 @app.route("/dataproducer")
 def dataproducer():
     user = get_or_fetch_user(github, session)
@@ -208,8 +215,8 @@ def manage_bioeco_owners():
             with open("program_names.txt", "r", encoding="utf-8") as f:
                 programs = [line.strip() for line in f if line.strip()]
             
-            for i, program_name in enumerate(programs):
-                entry_id = f"bioeco-{i}"
+            for program_name in programs:
+                entry_id = f"bioeco-{program_name}"
                 bioeco_entries.append({
                     "id": entry_id,
                     "index": i,
@@ -724,7 +731,7 @@ def fetch_bioeco_json(folder_name):
     """
     try:
         # Fetch the JSON file from GitHub
-        json_url = f"https://raw.githubusercontent.com/BioEcoOcean/metadata-tracking-dev/main/jsonFiles/{folder_name}/{folder_name}.json"
+        json_url = f"https://raw.githubusercontent.com/{REPO_OWNER}/{GITHUB_REPO}/main/jsonFiles/{folder_name}/{folder_name}.json"
         resp = requests.get(json_url, timeout=10)
         
         if resp.status_code != 200:

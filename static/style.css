@@ -121,16 +121,14 @@ table.projects thead {
     background-color: #81b0d6;
 }
 button.logins{
-    background-color: rgb(20, 14, 18);
+    background-color: #393c4e;
     color: #e6e1e1;  
     font-size: 18px;  /* Make text bigger */
-    padding: 7px 18px;  /* padding for button size */
+    padding: 12px 18px;  /* padding for button size */
     border: none; 
     border-radius: 45px; 
     cursor: pointer;  
     transition: background-color 0.3s ease; 
-    border: white;
-    border-style: solid;
 }
 .logins:hover {
     background-color: #464545;
@@ -227,17 +225,14 @@ hr {
     padding-top: 6px;
 }
 .centrebox {
-    border: navy;
-    border-style: double;
     padding: 20px;
-    background: var(--blue--2);
-    color: white;
+    background: #adc7e552;
+    color: #2f3f6a;
     justify-self: anchor-center;
     justify-items: center;
     justify-content: center;
     align-items: center;
     text-align: center;
-    box-shadow: 6px 5px 20px 0px #767676;
 }
 
 #issues-list li.selected {

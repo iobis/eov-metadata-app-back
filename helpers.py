@@ -13,6 +13,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 from flask import session, url_for, redirect
 from urllib.parse import quote
+from config_constants import REPO_OWNER, GITHUB_REPO, JSON_FOLDER
 
 load_dotenv()
 
@@ -256,7 +257,7 @@ def get_github_issues(github, session, repo_owner, github_repo, token_logger, ad
 
 def fetch_projects_from_github():
     """Fetch the list of projects from the csv in the GitHub repository"""
-    csv_url = "https://raw.githubusercontent.com/BioEcoOcean/metadata-tracking-dev/refs/heads/main/data/bioeco_list.csv"
+    csv_url = "https://raw.githubusercontent.com/{REPO_OWNER}/{GITHUB_REPO}/refs/heads/main/data/bioeco_list.csv"
     projects = []
     try:
         response = requests.get(csv_url, timeout=10)
