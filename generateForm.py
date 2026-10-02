@@ -1,6 +1,112 @@
 import json
 import re
 
+def _first_area_served(prefilled_data):
+    """areaServed may be a list of Places (JSON-LD) or a single dict from mapped form data."""
+    a = prefilled_data.get("areaServed")
+    if isinstance(a, list) and a:
+        return a[0] if isinstance(a[0], dict) else {}
+    if isinstance(a, dict):
+        return a
+    return {}
+
+
+_CRS_PREFIX = "<http://www.opengis.net/def/crs/OGC/1.3/CRS84> "
+
+def _strip_crs_prefix(wkt):
+    while wkt.startswith(_CRS_PREFIX):
+        wkt = wkt[len(_CRS_PREFIX):]
+    return wkt
+
+def _wkt_from_has_geometry(prefilled_data):
+    """Return the custom WKT string from a geosparql:hasGeometry entry, without the CRS prefix."""
+    areas = prefilled_data.get("areaServed")
+    if isinstance(areas, list):
+        for a in areas:
+            if not isinstance(a, dict):
+                continue
+            hg = a.get("geosparql:hasGeometry") or {}
+            wkt = hg.get("geosparql:asWKT", {}).get("@value", "")
+            if wkt:
+                return _strip_crs_prefix(wkt)
+    a = _first_area_served(prefilled_data)
+    wkt = (a.get("geosparql:hasGeometry") or {}).get("geosparql:asWKT", {}).get("@value", "")
+    return _strip_crs_prefix(wkt)
+
+
+def _publishing_principles_license_name(prefilled_data):
+    """publishingPrinciples is a list of CreativeWorks in JSON-LD."""
+    pp = prefilled_data.get("publishingPrinciples")
+    if isinstance(pp, list) and pp:
+        first = pp[0]
+        return first.get("name", "") if isinstance(first, dict) else ""
+    if isinstance(pp, dict):
+        return pp.get("name", "")
+    return ""
+
+
+def _normalize_funding_entries(funding_data):
+    """Turn JSON-LD grant list or dict-of-parallel-lists into list of dicts for addFunders()."""
+    if not funding_data:
+        return []
+    if isinstance(funding_data, dict):
+        funding_list = []
+        length = len(funding_data.get("name", []))
+        for i in range(length):
+            funding_entry = {
+                "funder_name": funding_data.get("funder", {}).get("name", [])[i]
+                if i < len(funding_data.get("funder", {}).get("name", []))
+                else "",
+                "funder_url": funding_data.get("funder", {}).get("url", [])[i]
+                if i < len(funding_data.get("funder", {}).get("url", []))
+                else "",
+                "name": funding_data.get("name", [])[i]
+                if i < len(funding_data.get("name", []))
+                else "",
+                "identifier": funding_data.get("identifier", [])[i]
+                if i < len(funding_data.get("identifier", []))
+                else "",
+            }
+            funding_list.append(funding_entry)
+        return funding_list
+    if isinstance(funding_data, list):
+        if not funding_data:
+            return []
+        sample = funding_data[0]
+        if isinstance(sample, dict) and "funder_name" in sample:
+            return funding_data
+        out = []
+        for g in funding_data:
+            if not isinstance(g, dict):
+                continue
+            fund = g.get("funder")
+            if not isinstance(fund, dict):
+                fund = {}
+            out.append(
+                {
+                    "funder_name": fund.get("name", ""),
+                    "funder_url": fund.get("url", ""),
+                    "name": g.get("name", ""),
+                    "identifier": g.get("identifier", ""),
+                }
+            )
+        return out
+    return []
+
+def _technical_readiness_values(prefilled_data):
+    """Return readiness selections from additionalProperty entries already stored in JSON-LD."""
+    readiness = {}
+    additional_property = prefilled_data.get("additionalProperty", [])
+    if isinstance(additional_property, list):
+        for item in additional_property:
+            if isinstance(item, dict):
+                name = item.get("name", "")
+                value = item.get("value", "")
+                if name in {"readinessCoordination", "readinessData", "readinessRequirements"}:
+                    readiness[name] = value
+    return readiness
+
+
 def get_first_or_str(val):
     # """Return a string representation of the first element if val is a list, set, or dict; else return val as string."""
     if isinstance(val, list) and val:
@@ -158,8 +264,8 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
                 URL:                 
             </div>
             <div class="flex-col input-col">
-                <input type='text' name='parentOrganization_url' id='parentOrganization_url' value="{prefilled_data.get('parentOrganization.url', '')}" placeholder="https://argo.ucsd.edu/about/">
-                <div class='previous'><strong>Previously entered:</strong> {prefilled_data.get('parentOrganization.url', 'N/A')}</div>
+                <input type='text' name='parentOrganization_url' id='parentOrganization_url' value="{prefilled_data.get('parentOrganization', {}).get('url', '')}" placeholder="https://argo.ucsd.edu/about/">
+                <div class='previous'><strong>Previously entered:</strong> {prefilled_data.get('parentOrganization', {}).get('url', 'N/A')}</div>
             </div>
         </div><br>
         """
@@ -170,7 +276,7 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
                 <label for='description'>Description: <span class="info-circle" data-tooltip="Provide a brief description of the project.">ⓘ</span></label>
             </div>
             <div class="flex-col input-col">
-                <textarea name='description' id='description' maxlength="2000" placeholder="BioEcoOcean was funded by the European Union under grant agreement No. 101136748 with 5.7 million EUR to address this challenge. Over the course of 4 years, from February 2024 to January 2027, a consortium of 9 European partners aims to create, and demonstrate the value of, a globally applicable Blueprint for Integrated Ocean Science (BIOS).">{prefilled_data.get('description', '')}</textarea>
+                <textarea name='description' id='description' maxlength="5000" placeholder="BioEcoOcean was funded by the European Union under grant agreement No. 101136748 with 5.7 million EUR to address this challenge. Over the course of 4 years, from February 2024 to January 2027, a consortium of 9 European partners aims to create, and demonstrate the value of, a globally applicable Blueprint for Integrated Ocean Science (BIOS).">{prefilled_data.get('description', '')}</textarea>
                 <div class='previous'><strong>Previously entered:</strong> {prefilled_data.get('description', 'N/A')}</div>
             </div>
         </div><br>
@@ -185,7 +291,8 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
                 eov_names.update(option["name"] for option in field["options"].values())
 
         keywords = prefilled_data.get("keywords", [])
-        # Filter keywords
+        # Filter keywords to only dict objects (skip plain strings), then filter out EOVs
+        keywords = _filter_dict_keywords(keywords)
         true_keywords = [kw for kw in keywords if kw.get("name") not in eov_names]
         print("True Keywords: ", true_keywords, flush=True)
         keywords_display = ", ".join([keyword["name"] for keyword in true_keywords if "name" in keyword]) if true_keywords else "N/A"
@@ -250,7 +357,7 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
         ### License section ###
         license_field = form_schema.get("categories_definition", {}).get("license", None)
         if license_field:
-            license_value = prefilled_data.get("publishingPrinciples", {}).get("name", 'N/A')
+            license_value = _publishing_principles_license_name(prefilled_data) or "N/A"
 
             # Show previously entered value above the field
             form_html += f"""
@@ -461,7 +568,8 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
         <br>
         """
 
-        # Spatial Coverage
+        # Spatial Coverage (JSON-LD uses areaServed as a list of Places)
+        area_for_spatial = _first_area_served(prefilled_data)
         regional_id_str = 'MRGID: '
         form_html += f"""
         <div class="flex-row">
@@ -472,8 +580,8 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
                 <div>
                 <input type="text" id="search_regions" placeholder="Search for a region. Minimum 3 characters, e.g., 'hud', 'bay'">
                 <button type="button" id="search_regions_btn" style="max-width:35%">Search</button>
-                <div class='previous'><strong>Previously entered:</strong> {prefilled_data.get('areaServed', {}).get("name", 'N/A')} {regional_id_str}{prefilled_data.get('areaServed', {}).get("identifier", 'N/A')}</div>
-                <div style="max-width: 90%;">Use the search box above to search for a marine location. Names are obtained from <a href="https://www.marineregions.org/gazetteer.php?p=search">Marine Regions Gazetteer.</div>
+                <div class='previous'><strong>Previously entered:</strong> {area_for_spatial.get("name", 'N/A')} {regional_id_str}{area_for_spatial.get("identifier", 'N/A')}</div>
+                <div style="max-width: 90%;">Use the search box above to search for a marine location. Names are obtained from <a href="https://www.marineregions.org/gazetteer.php?p=search">Marine Regions Gazetteer</a>.</div>
                 </div>
             </div>
         </div>
@@ -499,7 +607,7 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
                 Name: 
             </div>
             <div class="flex-col input-col">
-                <input type="spatial" name="spatial_coverage_name" id="spatial_coverage_name" value="{prefilled_data.get('areaServed', {}).get("name", '')}" readonly>
+                <input type="spatial" name="spatial_coverage_name" id="spatial_coverage_name" value="{area_for_spatial.get("name", '')}" readonly>
             </div>
         </div>
         <div class="flex-row">
@@ -507,26 +615,24 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
                 MRGID: 
             </div>
             <div class="flex-col input-col">    
-                <input type="text" name="spatial_coverage_identifier" id="spatial_coverage_identifier" value="{prefilled_data.get('areaServed', {}).get("identifier", '')}" readonly>
+                <input type="text" name="spatial_coverage_identifier" id="spatial_coverage_identifier" value="{area_for_spatial.get("identifier", '')}" readonly>
                 <button type="button" onclick="clearMarineRegions()" style="width: 40%;">Clear Location</button>
             </div>
         </div>
         <br><br>
         """
-        wkt_value = prefilled_data.get('areaServed', {}).get("geo", {}).get("geosparql:asWKT", {}).get("@value", "")
+        wkt_value = area_for_spatial.get("geo", {}).get("geosparql:asWKT", {}).get("@value", "")
         print("Raw WKT:", wkt_value)
 
-        # Extract just the POLYGON coordinates string
-        match = re.search(r'POLYGON\s*\(\((.*?)\)\)', wkt_value)
-        coords_raw = match.group(1) if match else ""
-        print("Extracted POLYGON coords:", coords_raw)
-
         coordinates = []
-        if coords_raw:
-            for pair in coords_raw.split(","):
-                lon_str, lat_str = pair.strip().split()
+        # Find all coordinate pairs (lon lat) in the WKT string
+        for match in re.finditer(r'(-?\d+\.?\d*)\s+(-?\d+\.?\d*)', wkt_value):
+            lon_str, lat_str = match.groups()
+            try:
                 lon, lat = float(lon_str), float(lat_str)
                 coordinates.append((lat, lon))  # (lat, lon)
+            except ValueError:
+                continue  # Skip invalid pairs
 
         # Extract bounding box values
         if coordinates:
@@ -574,7 +680,50 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
         """
         
         ## Provide custom WKT string
-        wkt_previous = prefilled_data.get('areaServed', {}).get("geosparql:hasGeometry", {}).get("geosparql:asWKT", {}).get("@value", "")
+        wkt_previous = _wkt_from_has_geometry(prefilled_data)
+                ## Provide custom WKT string
+        wkt_previous = _wkt_from_has_geometry(prefilled_data)
+
+        WKT_PREVIEW_LIMIT = 80  # chars to show before truncating; adjust to taste
+
+        if wkt_previous and len(wkt_previous) > WKT_PREVIEW_LIMIT:
+            wkt_preview_short = wkt_previous[:WKT_PREVIEW_LIMIT] + "…"
+            wkt_js_string = json.dumps(wkt_previous)  # safely escaped for the <script> block
+            wkt_previous_display = f"""
+                <span id="wkt-preview-short">{wkt_preview_short}
+                    <a href="#" onclick="toggleWktPreview(event)">(show more)</a>
+                </span>
+                <span id="wkt-preview-full" style="display:none;">{wkt_previous}
+                    <a href="#" onclick="toggleWktPreview(event)">(show less)</a>
+                </span>
+                <button type="button" onclick="copyWktToClipboard()" style="margin-left:8px;">Copy full string</button>
+                <span id="wkt-copy-feedback" style="display:none; color: green; margin-left:6px;">Copied!</span>
+                <script>
+                    var _wktFullString = {wkt_js_string};
+                    function toggleWktPreview(e) {{
+                        e.preventDefault();
+                        var short = document.getElementById('wkt-preview-short');
+                        var full = document.getElementById('wkt-preview-full');
+                        if (full.style.display === 'none') {{
+                            short.style.display = 'none';
+                            full.style.display = 'inline';
+                        }} else {{
+                            short.style.display = 'inline';
+                            full.style.display = 'none';
+                        }}
+                    }}
+                    function copyWktToClipboard() {{
+                        navigator.clipboard.writeText(_wktFullString).then(function() {{
+                            var fb = document.getElementById('wkt-copy-feedback');
+                            fb.style.display = 'inline';
+                            setTimeout(function() {{ fb.style.display = 'none'; }}, 1500);
+                        }});
+                    }}
+                </script>
+            """
+        else:
+            wkt_previous_display = wkt_previous or 'N/A'
+
         form_html += f"""
         <div class="flex-row">
             <div class="form-label">
@@ -582,7 +731,7 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
             </div>
             <div class="flex-col input-col">    
                 <input type="text" name="wktstring" id="wktstring" value="{wkt_previous}" placeholder="POLYGON ((-64.8 32.3, -65.5 18.3, -80.3 25.2, -64.8 32.3))">
-                <div class='previous'><strong>Previously entered:</strong> {wkt_previous or 'N/A'}</div>
+                <div class='previous'><strong>Previously entered:</strong> {wkt_previous_display}</div>
                 <div>Well-Known Text (WKT) strings are a text format to respresent spatial geometries (e.g. points, lines, polygons). For help generating WKT strings, see <a href="https://wktmap.com/" target='_blank'>https://wktmap.com/</a></div>
             </div>
         </div>
@@ -616,6 +765,8 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
 
         # Build selected sets for each group
         keywords = prefilled_data.get("keywords", [])
+        # Filter keywords to only dict objects (skip plain strings)
+        keywords = _filter_dict_keywords(keywords)
         selected_bioeco = [kw["name"] for kw in keywords if kw.get("name") in bioeco_eovs]
         selected_other = [kw["name"] for kw in keywords if kw.get("name") in other_eovs]
         selected_subvars = [kw["name"] for kw in keywords if kw.get("name") in subvars]
@@ -764,6 +915,58 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
             </div>
         </div>
         """
+
+        ### Technical Readiness section ###
+        technical_readiness_values = _technical_readiness_values(prefilled_data)
+        technical_readiness_options = [
+            "Level 1 - Idea",
+            "Level 2 - Plan",
+            "Level 3 - Proof of concept",
+            "Level 4 - Trial",
+            "Level 5 - Verification",
+            "Level 6 - Operational",
+            "Level 7 - Fitness for purpose",
+            "Level 8 - Mission qualified",
+            "Level 9 - Sustained",
+        ]
+        form_html += """
+        <div class="collapsible-section" id="technical-readiness">
+            <div class="collapsible-header">
+                <h2>Technical Readiness</h2>
+                <span class="collapsible-toggle">▼</span>
+            </div>
+            <div class="collapsible-content">
+        """
+        form_html += "<p>Please select the current technical readiness level for each category.</p>"
+        for category_key, category_label in [
+            ("readinessCoordination", "Coordination"),
+            ("readinessData", "Data"),
+            ("readinessRequirements", "Requirements"),
+        ]:
+            selected_value = technical_readiness_values.get(category_key, "")
+            form_html += f"""
+            <div class="flex-row">
+                <div class="form-label">
+                    <label for='{category_key}'>{category_label}:<span class='info-circle' data-tooltip='Select the current technical readiness level for this area of the programme.'>ⓘ</span></label>
+                </div>
+                <div class="flex-col input-col">
+                    <select name='{category_key}' id='{category_key}'>
+                        <option value='' disabled {'selected' if not selected_value else ''}>Select a level</option>
+            """
+            for option in technical_readiness_options:
+                selected = "selected" if selected_value == option else ""
+                form_html += f"<option value='{option}' {selected}>{option}</option>"
+            form_html += f"""
+                    </select>
+                    <div class='previous'><strong>Previously entered:</strong> {selected_value if selected_value else 'N/A'}</div>
+                </div>
+            </div>
+            <br>
+            """
+        form_html += """
+            </div>
+        </div>
+        """
         ### Outputs section ###
         # Outputs Section (Collapsible)
         form_html += """
@@ -827,37 +1030,26 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
         form_html += "<h2>Funding Information <span class='info-circle' data-tooltip='Provide information about funding organizations and awards.'>ⓘ</span></h2>"
         form_html += "<p>Please provide information about the funding that supports your entry.</p>"
 
-        funding_data = prefilled_data.get("funding", [])
-        form_html += f"""
-        <div class="previous"><strong>Previously entered:</strong>
-            Funder name: {", ".join(prefilled_data.get("funding", {}).get("funder", {}).get("name", [])) if prefilled_data.get("funding", {}).get("funder", {}).get("name") else "N/A"},
-            Funder URL: {", ".join(prefilled_data.get("funding", {}).get("funder", {}).get("url", [])) if prefilled_data.get("funding", {}).get("funder", {}).get("url") else "N/A"},
-            Funding award name: {", ".join(prefilled_data.get("funding", {}).get("name", [])) if prefilled_data.get("funding", {}).get("name") else "N/A"},
-            Funding award identifier: {", ".join(prefilled_data.get("funding", {}).get("identifier", [])) if prefilled_data.get("funding", {}).get("identifier") else "N/A"}
-        </div>
-        """
+        raw_funding = prefilled_data.get("funding", [])
+        funding_data = _normalize_funding_entries(raw_funding)
+        if funding_data:
+            prev_bits = []
+            for i, g in enumerate(funding_data, start=1):
+                prev_bits.append(
+                    f"<strong>Funding {i}:</strong> "
+                    f"funder: {g.get('funder_name') or 'N/A'} "
+                    f"({g.get('funder_url') or 'N/A'}); "
+                    f"award: {g.get('name') or 'N/A'} "
+                    f"[id: {g.get('identifier') or 'N/A'}]"
+                )
+            form_html += (
+                "<div class='previous'><strong>Previously entered:</strong><br>"
+                + "<br>".join(prev_bits)
+                + "</div>"
+            )
+        else:
+            form_html += "<div class='previous'><strong>Previously entered:</strong> N/A</div>"
         print("Funding data:", funding_data)
-
-        # Normalize the funding data into a list of dictionaries
-        if isinstance(funding_data, dict):  # If it's a dict of lists, restructure into list of dicts
-            funding_list = []
-            length = len(funding_data.get("name", []))
-            for i in range(length):
-                #funder_info = funding_data.get("funder", [{}])[i] if i < len(funding_data.get("funder", [])) else {}
-                #print("Funder info:", funder_info)  # Debugging
-                funding_entry = {
-                    "funder_name": funding_data.get("funder", {}).get("name", [])[i] if i < len(funding_data.get("funder", {}).get("name", [])) else "",
-                    "funder_url": funding_data.get("funder", {}).get("url", [])[i] if i < len(funding_data.get("funder", {}).get("url", [])) else "",
-                    "name": funding_data.get("name", [])[i] if i < len(funding_data.get("name", [])) else "",
-                    "identifier": funding_data.get("identifier", [])[i] if i < len(funding_data.get("identifier", [])) else ""
-                }
-                funding_list.append(funding_entry)
-            funding_data = funding_list
-        elif isinstance(funding_data, list):  # If it's already a list, use as is
-            pass
-
-        # Debug: Print the normalized funding data
-        print("Normalized funding data:", funding_data)
 
         # Generate the form fields for prefilled funding data
         form_html += '<div id="funder-container"></div>'
@@ -867,10 +1059,16 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
                 funder_url = funding.get('funder_url', '')
                 award_name = funding.get('name', '')
                 award_id = funding.get('identifier', '')
+                fn, fu, an, ai = (
+                    json.dumps(funder_name),
+                    json.dumps(funder_url),
+                    json.dumps(award_name),
+                    json.dumps(award_id),
+                )
                 form_html += f"""
                 <script>
                     window.addEventListener("DOMContentLoaded", function() {{
-                        addFunders("{funder_name}", "{funder_url}", "{award_name}", "{award_id}");
+                        addFunders({fn}, {fu}, {an}, {ai});
                     }});
                 </script>
                 """
