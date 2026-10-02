@@ -93,6 +93,39 @@ def _normalize_funding_entries(funding_data):
         return out
     return []
 
+def _normalize_identifier_entries(identifier_data):
+    """Turn JSON-LD identifier (single PropertyValue dict, list of them, or a
+    mapped dict-of-parallel-lists) into a list of {'url', 'type'} dicts for addIdentifierInput()."""
+    if not identifier_data:
+        return []
+    if isinstance(identifier_data, list):
+        return [
+            {"url": item.get("url", ""), "type": item.get("description", "")}
+            for item in identifier_data
+            if isinstance(item, dict)
+        ]
+    if isinstance(identifier_data, dict):
+        urls = identifier_data.get("url", [])
+        types = identifier_data.get("description", [])
+        urls = urls if isinstance(urls, list) else ([urls] if urls else [])
+        types = types if isinstance(types, list) else ([types] if types else [])
+        entries = []
+        for i in range(max(len(urls), len(types))):
+            url = urls[i] if i < len(urls) else ""
+            id_type = types[i] if i < len(types) else ""
+            if url or id_type:
+                entries.append({"url": url, "type": id_type})
+        return entries
+    return []
+
+
+def _filter_dict_keywords(keywords):  ## NOTE TO SELF: may need to revisit this
+    """Filter keywords to only include dicts (skip plain strings) to avoid 'str' object has no attribute 'get' errors."""
+    if not isinstance(keywords, list):
+        return []
+    return [kw for kw in keywords if isinstance(kw, dict)]
+
+
 def _technical_readiness_values(prefilled_data):
     """Return readiness selections from additionalProperty entries already stored in JSON-LD."""
     readiness = {}
@@ -176,49 +209,55 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
                 <label for='url'>URL:<span class="required">*</span><span class="info-circle" data-tooltip="Provide the URL to the homepage for the data producer.">ⓘ</span></label>
             </div>
             <div class="flex-col input-col">
-                <input type='url' name='url' id='url' value="{prefilled_data.get('url', '')}" placeholder="https://bioecoocean.org/" required>
+                <input type='url' name='url' id='url' value="{prefilled_data.get('url', '')}" placeholder="https://bioecoocean.org/">
                 <div class='previous'><strong>Previously entered:</strong> {prefilled_data.get('url', 'N/A')}</div>
             </div>
         </div>
         <br>
         """
-        ### Project ID ###
-        form_html += f"""
-        <div class="flex-row">
-            <div class="form-label">
-                <label for='projid'>Data Producer ID:<span class="info-circle" data-tooltip="Provide the ID for the entity producing EOV data, e.g. project, institution, programme, etc. IDs could include a Research Activity Identifier (RAiD), or Research Organization Registry identifier (ROR ID). If you do not currently have one it can be added later. The ID will facilitate connecting the data producer metadata with other outputs e.g. datasets in OBIS">ⓘ</span></label>
-            </div>
-            <div class="flex-col input-col">
-                <input type='text' name='projid' id='projid' value="{prefilled_data.get('identifier', {}).get('url', '')}" placeholder="e.g. a RAiD, or ROR ID">
-                <div class='previous'><strong>Previously entered:</strong> {prefilled_data.get('identifier', {}).get('url', 'N/A')}</div>
-            </div>
-        </div>
-        """
+        ### Project ID(s) ###
         identifier_types = form_schema.get("identifier_types", {})
-        projid_type_value = prefilled_data.get('identifier', {}).get('description', '')
+        identifier_entries = _normalize_identifier_entries(prefilled_data.get("identifier"))
+        identifiers_display = (
+            "; ".join(f"{(e['type'] or 'N/A')}: {e['url']}" for e in identifier_entries if e.get("url"))
+            or "N/A"
+        )
+        identifier_types_json = json.dumps({key: info.get("name", key) for key, info in identifier_types.items()})
 
         form_html += f"""
+        <script>window.IDENTIFIER_TYPES = {identifier_types_json};</script>
         <div class="flex-row">
             <div class="form-label">
-                Identifier Type:
+                <label>Data Producer ID(s):<span class="info-circle" data-tooltip="Provide one or more IDs for the entity producing EOV data, e.g. project, institution, programme, etc. IDs could include a Research Activity Identifier (RAiD), Research Organization Registry identifier (ROR ID), WIGOS ID, or a DOI. If you do not currently have one it can be added later. IDs will facilitate connecting the data producer metadata with other outputs e.g. datasets in OBIS">ⓘ</span></label>
             </div>
-            <div class="flex-col input-col">
-                <select name='projid_type' id='projid_type'>
-                <option value='' disabled selected>Select type</option>
+        </div>
+        <div class='previous'><strong>Previously entered:</strong> {identifiers_display}</div>
+        <div id="identifiers-container"></div>
         """
-        for key, info in identifier_types.items():
-            selected = "selected" if projid_type_value == key else ""
-            form_html += f"<option value='{key}' {selected}>{info['name']}</option>"
+        if identifier_entries:
+            for entry in identifier_entries:
+                form_html += f"""
+                <script>
+                    window.addEventListener("DOMContentLoaded", function() {{
+                        addIdentifierInput({json.dumps(entry.get('type', ''))}, {json.dumps(entry.get('url', ''))});
+                    }});
+                </script>
+                """
+        else:
+            form_html += """
+            <script>
+                window.addEventListener("load", function() {
+                    addIdentifierInput();
+                });
+            </script>
+            """
         form_html += """
-                </select>
-                <div class='previous'><strong>Previously entered:</strong> {}</div>
-                <a> If your desired type is not listed, please contact us to have it added. To generate a DOI for your entry, click the button and fill the form below, ten copy the generated DOI into the field above. Some fields may have been prepopulated for you using information in the form. Please confirm data is correct before creating your DOI. Contact helpdesk@obis.org to correct or update information.</a>
-            
-        """.format(projid_type_value if projid_type_value else "N/A")
+        <button type="button" onclick="addIdentifierInput()">Add another ID</button>
+        <a> If your desired type is not listed, please contact us to have it added. To generate a DOI for your entry, click the button and fill the form below; a new ID row will be added automatically with the generated DOI. Some fields may have been prepopulated for you using information in the form. Please confirm data is correct before creating your DOI. Contact helpdesk@obis.org to correct or update information.</a>
+        """
         # Add DataCite button
         form_html += f"""
-        <button type="button" id="generate-doi-btn" onclick="toggleDoiForm()" style="width: 40%;">Generate DOI</button></div>
-        </div>
+        <br><button type="button" id="generate-doi-btn" onclick="toggleDoiForm()" style="width: 40%;">Generate DOI</button>
         <div id="doi-form-container" style="display: none; border: 1px solid #ccc; padding: 1px 15px; margin: 10px 0; background-color: #f9f9f9;">
             <h3>DOI Information</h3>
             <h4>Title</h4>
@@ -254,8 +293,8 @@ def generate_form(prefilled_data=None, actions_data=None, frequency_data=None):
                 Name: 
             </div>
             <div class="flex-col input-col">
-                <input type='text' name='parentOrganization' id='parentOrganization' value="{prefilled_data.get('parentOrganization.legalName', '')}" placeholder="Argo">
-                <div class='previous'><strong>Previously entered:</strong> {prefilled_data.get('parentOrganization.legalName', 'N/A')}</div>
+                <input type='text' name='parentOrganization' id='parentOrganization' value="{prefilled_data.get('parentOrganization', {}).get('legalName', '')}" placeholder="Argo">
+                <div class='previous'><strong>Previously entered:</strong> {prefilled_data.get('parentOrganization', {}).get('legalName', 'N/A')}</div>
             </div>
         </div>
         

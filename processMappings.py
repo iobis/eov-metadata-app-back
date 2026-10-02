@@ -8,7 +8,7 @@ def get_nested_value(data, field_path, default=None):
         if isinstance(data, list):
             # If the current level is a list, try to get a list of values for the key
             # Extract all items in the list that are dictionaries and have the key
-            data = [item.get(key, default) for item in data if isinstance(item, dict)]
+            data = [item.get(key) for item in data if isinstance(item, dict) and item.get(key) is not None]
             if not data:  # If no dictionaries with the key are found, return default
                 return default
         elif isinstance(data, dict):
@@ -24,12 +24,20 @@ def map_form_to_schema(form_data, field_mapping, base_type=None):
     if base_type:
         schema_entry["@type"] = base_type
 
+    # Preserve structured project metadata that is not represented as a simple form field mapping, such as additionalProperty entries containing TRLs
+    if isinstance(form_data, dict) and "additionalProperty" in form_data:
+        schema_entry["additionalProperty"] = form_data.get("additionalProperty")
+
     for form_field, (schema_field, field_type) in field_mapping.items():
     # Split the schema field to handle nested fields
         keys = schema_field.split(".")
 
         # Get the value from the form data
         value = get_nested_value(form_data, keys)
+
+        # Skip fields that aren't present at all
+        if value is None:
+            continue
 
         # Process lists appropriately
         if isinstance(value, list):
@@ -42,11 +50,7 @@ def map_form_to_schema(form_data, field_mapping, base_type=None):
 
         # Convert the value to the correct type
         elif field_type == str:
-            value = str(value) if value else ""
-
-        # Skip None values
-        if value is None:
-            continue
+            value = str(value)
 
         # Insert into schema
         temp = schema_entry

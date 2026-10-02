@@ -68,7 +68,7 @@ def makeFormJson():
         shortname = sanitized_data.get('shortname', [""])[0]
         project_name = sanitized_data.get('project_name', [""])[0]
         project_name_sanitized = (shortname or project_name).replace(" ", "_")
-        schema_entry["@id"] = f"https://raw.githubusercontent.com/BioEcoOcean/metadata-tracking-dev/refs/heads/main/jsonFiles/{project_name_sanitized}/{project_name_sanitized}.json"
+        schema_entry["@id"] = f"https://raw.githubusercontent.com/{REPO_OWNER}/{GITHUB_REPO}/refs/heads/main/jsonFiles/{project_name_sanitized}/{project_name_sanitized}.json"
 
         ## Add legalName, name, url, description
         schema_entry["legalName"] = sanitized_data.get("project_name", [""])[0]
@@ -78,10 +78,8 @@ def makeFormJson():
         if sanitized_data.get("description", [""])[0]:
             schema_entry["description"] = sanitized_data.get("description", [""])[0]
         
-        ## Handle the projid & identifier field
-        projid_type = request.form.get("projid_type", "")
+        ## Handle the projid & identifier field (supports multiple IDs, e.g. a ROR and a WIGOS ID)
         identifier_types = form_schema.get("identifier_types", {})
-        projid_type_url = identifier_types.get(projid_type, {}).get("url", "")
         def extract_identifier_value(projid_type, projid_url):
             if projid_type == "DOI" and projid_url.startswith("https://doi.org/"):
                 return projid_url.replace("https://doi.org/", "")
@@ -91,16 +89,23 @@ def makeFormJson():
                 return projid_url.replace("https://ror.org/", "")
             # fallback: try to get everything after the last slash
             return projid_url.rstrip('/').split('/')[-1]
-        if sanitized_data.get("projid", [""])[0]:
-            projid_url = sanitized_data.get("projid", [""])[0]
-            value = extract_identifier_value(projid_type, projid_url)
-            schema_entry["identifier"] = { #will need to be updated with some logic for if it's a DOI or not
+        projid_urls = sanitized_data.get("projids", [])
+        projid_types = sanitized_data.get("projid_types", [])
+        identifiers = []
+        for i in range(max(len(projid_urls), len(projid_types))):
+            projid_url = (projid_urls[i] if i < len(projid_urls) else "").strip()
+            projid_type = projid_types[i] if i < len(projid_types) else ""
+            if not projid_url:
+                continue
+            identifiers.append({
                 "@type": "schema:PropertyValue",
-                "description": sanitized_data.get("projid_type", [""])[0],
-                "propertyID": projid_type_url,
+                "description": projid_type,
+                "propertyID": identifier_types.get(projid_type, {}).get("url", ""),
                 "url": projid_url,
-                "value": value #need to add logic to get the value from the url
-            }
+                "value": extract_identifier_value(projid_type, projid_url)
+            })
+        if identifiers:
+            schema_entry["identifier"] = identifiers
         
         ## Parent organization
         if sanitized_data.get("parentOrganization", [""])[0]:
@@ -129,6 +134,19 @@ def makeFormJson():
                 "text": datapolicy_text
         })
         schema_entry["publishingPrinciples"] = publishing_principles
+
+        ## Add technical readiness values under additionalProperty
+        technical_readiness_values = []
+        for readiness_name in ["readinessCoordination", "readinessData", "readinessRequirements"]:
+            readiness_value = sanitized_data.get(readiness_name, [""])[0]
+            if readiness_value:
+                technical_readiness_values.append({
+                    "@type": "schema:PropertyValue",
+                    "name": readiness_name,
+                    "value": readiness_value
+                })
+        if technical_readiness_values:
+            schema_entry["additionalProperty"] = technical_readiness_values
         
         ## Add time coverage
         if sanitized_data.get("temporal_coverage_start", [""])[0]:
@@ -143,41 +161,51 @@ def makeFormJson():
         west = sanitized_data.get("west", [""])[0]
         north = sanitized_data.get("north", [""])[0]
         east = sanitized_data.get("east", [""])[0]
-        if area_name and area_id:
-            # For named areas, add as areaServed for now, but to align, perhaps integrate
+
+        area_served = None
+        if area_name or area_id:
             area_served = {
                 "@type": "schema:Place",
                 "name": area_name,
                 "identifier": area_id,
             }
-            if south and west and north and east:
-                area_served["geo"] = {
-                        "@type": "schema:GeoShape",
-                        "description": "Bounding box polygon with lat long (Y X) coordinate order.",
-                        "geosparql:asWKT": {
-                            "@type": "http://www.opengis.net/ont/geosparql#wktLiteral",
-                            "@value": f"<http://www.opengis.net/def/crs/OGC/1.3/CRS84> POLYGON(({west} {south}, {east} {south}, {east} {north}, {west} {north}, {west} {south} ))"
-                            }
+        if south and west and north and east:
+            if area_served is None:
+                area_served = {"@type": "schema:Place"}
+            area_served["geo"] = {
+                "@type": "schema:GeoShape",
+                "description": "Bounding box polygon with lat long (Y X) coordinate order.",
+                "geosparql:asWKT": {
+                    "@type": "http://www.opengis.net/ont/geosparql#wktLiteral",
+                    "@value": f"<http://www.opengis.net/def/crs/OGC/1.3/CRS84> POLYGON(({west} {south}, {east} {south}, {east} {north}, {west} {north}, {west} {south} ))"
                 }
+            }
+        if area_served:
             schema_entry["areaServed"] = [area_served]
+
         print("bounds: ", north, south, east, west)
         wktstring = sanitized_data.get("wktstring", [""])[0]
         if wktstring:
-            # Ensure areaServed is a list before appending
             if "areaServed" not in schema_entry:
                 schema_entry["areaServed"] = []
-            elif not isinstance(schema_entry["areaServed"], list):
-                # If it's a dict (from mapping), convert to list
-                schema_entry["areaServed"] = [schema_entry["areaServed"]]
-            
-            schema_entry["areaServed"].append({
+            wkt_entry = {
                 "geosparql:hasGeometry": {
                     "geosparql:asWKT": {
                         "@type": "http://www.opengis.net/ont/geosparql#wktLiteral",
                         "@value": f"<http://www.opengis.net/def/crs/OGC/1.3/CRS84> {wktstring}"
                     }
                 }
-            })
+            }
+            # Update an existing hasGeometry entry rather than appending a new one
+            existing_idx = next(
+                (i for i, a in enumerate(schema_entry["areaServed"])
+                 if isinstance(a, dict) and "geosparql:hasGeometry" in a),
+                None
+            )
+            if existing_idx is not None:
+                schema_entry["areaServed"][existing_idx] = wkt_entry
+            else:
+                schema_entry["areaServed"].append(wkt_entry)
 
         ## Add keywords (select & EOVs)
         keywords_list = []

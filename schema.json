@@ -18,6 +18,10 @@
         "RAiD": {
             "name": "RAiD (Research Activity Identifier)",
             "url": "https://registry.identifiers.org/registry/raid"
+            },
+        "WIGOS": {
+            "name": "WIGOS (GOOS OceanOPS Identifier)",
+            "url": "https://community.wmo.int/site/knowledge-hub/programmes-and-initiatives/wmo-integrated-global-observing-system-wigos/implementation-of-wmo-integrated-global-observing-system-wigos/wigos-station-identifiers"
             }
         },
     "categories_definition": {

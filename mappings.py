@@ -1,10 +1,13 @@
+# Paths use compact JSON without the "schema:" prefix. Data ingested from GitHub is passed
+# through strip_schema_org_prefixes() in helpers.py before map_form_to_schema() so these
+# paths align with makeFormIntoJson output (add_schema_prefix).
 schema_field_mapping = {
     "project_name": ("legalName", str),
     "shortname": ("name", str),
     "url": ("url", str),
     "description": ("description", str),
-    "projid": ("identifier.url", str),
-    "projid_type": ("identifier.description", str),
+    "projids": ("identifier.url", list),
+    "projid_types": ("identifier.description", list),
     "parentOrganization": ("parentOrganization.legalName", str),
     "parentOrganization_url": ("parentOrganization.url", str),
     "license": ("publishingPrinciples.name", str),
